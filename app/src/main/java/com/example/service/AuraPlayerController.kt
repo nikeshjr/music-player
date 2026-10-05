@@ -68,7 +68,11 @@ class AuraPlayerController private constructor(private val context: Context) {
 
     init {
         // Pre-create ExoPlayer instance so it is ready immediately
-        getOrCreatePlayer()
+        try {
+            getOrCreatePlayer()
+        } catch (e: Throwable) {
+            AuraLog.e(TAG, "ExoPlayer pre-warming postponed: ${e.message}", e)
+        }
 
         sleepTimerManager = SleepTimerManager(
             onFadeVolume = { volumeScale ->
@@ -92,11 +96,16 @@ class AuraPlayerController private constructor(private val context: Context) {
             .setUsage(C.USAGE_MEDIA)
             .build()
 
-        val player = ExoPlayer.Builder(context)
-            .setAudioAttributes(audioAttributes, true)
-            .setHandleAudioBecomingNoisy(true)
-            .setWakeMode(C.WAKE_MODE_LOCAL)
-            .build()
+        val player = try {
+            ExoPlayer.Builder(context)
+                .setAudioAttributes(audioAttributes, true)
+                .setHandleAudioBecomingNoisy(true)
+                .setWakeMode(C.WAKE_MODE_LOCAL)
+                .build()
+        } catch (e: Throwable) {
+            AuraLog.e(TAG, "Standard ExoPlayer creation failed, using bare builder: ${e.message}", e)
+            ExoPlayer.Builder(context).build()
+        }
 
         attachPlayer(player)
         return player
@@ -330,21 +339,23 @@ class AuraPlayerController private constructor(private val context: Context) {
 
     private fun startPositionTicker() {
         positionTickerJob?.cancel()
-        positionTickerJob = scope.launch(Dispatchers.Default) {
+        positionTickerJob = scope.launch(Dispatchers.Main) {
             while (isActive) {
                 exoPlayer?.let { p ->
                     if (p.isPlaying) {
                         val pos = p.currentPosition
                         val dur = p.duration.coerceAtLeast(0L)
                         val buf = p.bufferedPosition
-                        _uiState.value = _uiState.value.copy(
-                            currentPositionMs = pos,
-                            durationMs = dur,
-                            bufferedPositionMs = buf
-                        )
+                        if (kotlin.math.abs(_uiState.value.currentPositionMs - pos) >= 200L) {
+                            _uiState.value = _uiState.value.copy(
+                                currentPositionMs = pos,
+                                durationMs = dur,
+                                bufferedPositionMs = buf
+                            )
+                        }
                     }
                 }
-                delay(200L) // Smooth 5Hz seekbar updates without blocking Main Looper
+                delay(300L) // Smooth updates on Main thread without thread jumping
             }
         }
     }

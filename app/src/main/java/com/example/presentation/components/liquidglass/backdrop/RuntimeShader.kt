@@ -34,15 +34,15 @@ fun RuntimeShader.asAndroidRuntimeShader(): android.graphics.RuntimeShader {
 internal class AndroidRuntimeShader(val shader: android.graphics.RuntimeShader) : RuntimeShader {
 
   override fun setFloatUniform(name: String, value: Float) {
-    shader.setFloatUniform(name, value)
+    try { shader.setFloatUniform(name, value) } catch (_: Throwable) { }
   }
 
   override fun setFloatUniform(name: String, value1: Float, value2: Float) {
-    shader.setFloatUniform(name, value1, value2)
+    try { shader.setFloatUniform(name, value1, value2) } catch (_: Throwable) { }
   }
 
   override fun setFloatUniform(name: String, value1: Float, value2: Float, value3: Float) {
-    shader.setFloatUniform(name, value1, value2, value3)
+    try { shader.setFloatUniform(name, value1, value2, value3) } catch (_: Throwable) { }
   }
 
   override fun setFloatUniform(
@@ -52,35 +52,35 @@ internal class AndroidRuntimeShader(val shader: android.graphics.RuntimeShader) 
     value3: Float,
     value4: Float
   ) {
-    shader.setFloatUniform(name, value1, value2, value3, value4)
+    try { shader.setFloatUniform(name, value1, value2, value3, value4) } catch (_: Throwable) { }
   }
 
   override fun setFloatUniform(name: String, values: FloatArray) {
-    shader.setFloatUniform(name, values)
+    try { shader.setFloatUniform(name, values) } catch (_: Throwable) { }
   }
 
   override fun setIntUniform(name: String, value: Int) {
-    shader.setIntUniform(name, value)
+    try { shader.setIntUniform(name, value) } catch (_: Throwable) { }
   }
 
   override fun setIntUniform(name: String, value1: Int, value2: Int) {
-    shader.setIntUniform(name, value1, value2)
+    try { shader.setIntUniform(name, value1, value2) } catch (_: Throwable) { }
   }
 
   override fun setIntUniform(name: String, value1: Int, value2: Int, value3: Int) {
-    shader.setIntUniform(name, value1, value2, value3)
+    try { shader.setIntUniform(name, value1, value2, value3) } catch (_: Throwable) { }
   }
 
   override fun setIntUniform(name: String, value1: Int, value2: Int, value3: Int, value4: Int) {
-    shader.setIntUniform(name, value1, value2, value3, value4)
+    try { shader.setIntUniform(name, value1, value2, value3, value4) } catch (_: Throwable) { }
   }
 
   override fun setIntUniform(name: String, values: IntArray) {
-    shader.setIntUniform(name, values)
+    try { shader.setIntUniform(name, values) } catch (_: Throwable) { }
   }
 
   override fun setColorUniform(name: String, color: Color) {
-    shader.setColorUniform(name, color.toArgb())
+    try { shader.setColorUniform(name, color.toArgb()) } catch (_: Throwable) { }
   }
 }
 

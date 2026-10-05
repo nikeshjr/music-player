@@ -11,6 +11,7 @@ package com.example.presentation.components.liquidglass.backdrop.backdrops
 
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
+import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.node.DrawModifierNode
 import androidx.compose.ui.node.GlobalPositionAwareModifierNode
@@ -60,8 +61,18 @@ private class LayerBackdropNode(var backdrop: LayerBackdrop) :
   DrawModifierNode, GlobalPositionAwareModifierNode, Modifier.Node() {
 
   override fun ContentDrawScope.draw() {
-    drawContent()
-    recordLayer(this@LayerBackdropNode, backdrop.graphicsLayer) { backdrop.onDraw(this@draw) }
+    try {
+      if (size.width > 0f && size.height > 0f) {
+        recordLayer(this@LayerBackdropNode, backdrop.graphicsLayer) {
+          backdrop.onDraw(this@draw)
+        }
+        drawLayer(backdrop.graphicsLayer)
+      } else {
+        drawContent()
+      }
+    } catch (_: Throwable) {
+      drawContent()
+    }
   }
 
   override fun onGloballyPositioned(coordinates: LayoutCoordinates) {

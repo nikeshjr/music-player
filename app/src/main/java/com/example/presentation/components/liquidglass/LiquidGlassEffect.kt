@@ -6,15 +6,18 @@ import androidx.compose.foundation.shape.CornerBasedShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.example.presentation.components.liquidglass.backdrop.Backdrop
+import com.example.presentation.components.liquidglass.backdrop.BackdropEffectScope
 import com.example.presentation.components.liquidglass.backdrop.drawBackdrop
 import com.example.presentation.components.liquidglass.backdrop.effects.blur
 import com.example.presentation.components.liquidglass.backdrop.effects.colorControls
@@ -160,10 +163,10 @@ fun Modifier.liquidGlass(
       Color(0xFF121212)
     }
 
-  return drawBackdrop(
-    backdrop = backdrop,
-    shape = { shape },
-    effects = {
+  val effectsLambda: BackdropEffectScope.() -> Unit = remember(
+    saturation, blurPx, applyEdgeEffects, lensHeightPx, lensAmountPx, config.depthEffect, config.chromaticAberration
+  ) {
+    {
       if (saturation != 1f) {
         colorControls(saturation = saturation)
       }
@@ -182,17 +185,29 @@ fun Modifier.liquidGlass(
           chromaticAberration = config.chromaticAberration,
         )
       }
-    },
-    highlight = if (applyEdgeEffects) ({ Highlight.Default }) else null,
-    shadow = if (applyEdgeEffects) ({ Shadow.Default }) else null,
-    onDrawSurface = {
+    }
+  }
+
+  val onDrawSurfaceLambda: DrawScope.() -> Unit = remember(surfaceTintColor, config.surfaceOpacity) {
+    {
       if (config.surfaceOpacity > 0f) {
         drawRect(
           color = surfaceTintColor.copy(alpha = config.surfaceOpacity),
           size = size,
         )
       }
-    },
+    }
+  }
+
+  val shapeLambda = remember(shape) { { shape } }
+
+  return drawBackdrop(
+    backdrop = backdrop,
+    shape = shapeLambda,
+    effects = effectsLambda,
+    highlight = null,
+    shadow = null,
+    onDrawSurface = onDrawSurfaceLambda,
     backdropScale = resolutionScale,
   )
 }

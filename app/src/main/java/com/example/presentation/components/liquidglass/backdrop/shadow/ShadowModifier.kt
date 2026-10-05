@@ -79,36 +79,38 @@ internal class ShadowNode(var shapeProvider: ShapeProvider, var shadow: () -> Sh
     val shadow = shadow() ?: return drawContent()
 
     val shadowLayer = shadowLayer
-    if (shadowLayer != null) {
-      val size = size
-      val density: Density = this
-      val layoutDirection = layoutDirection
+    if (shadowLayer != null && size.width > 0f && size.height > 0f) {
+      try {
+        val size = size
+        val density: Density = this
+        val layoutDirection = layoutDirection
 
-      val radius = shadow.radius.toPx()
-      val offsetX = shadow.offset.x.toPx()
-      val offsetY = shadow.offset.y.toPx()
-      val shadowSize =
-        IntSize(
-          ceil(size.width + radius * 4f + offsetX).toInt(),
-          ceil(size.height + radius * 4f + offsetY).toInt()
-        )
-      val outline = shapeProvider.shape.createOutline(size, layoutDirection, density)
+        val radius = shadow.radius.toPx()
+        val offsetX = shadow.offset.x.toPx()
+        val offsetY = shadow.offset.y.toPx()
+        val safeWidth = ceil(size.width + radius * 4f + offsetX).toInt().coerceAtLeast(1)
+        val safeHeight = ceil(size.height + radius * 4f + offsetY).toInt().coerceAtLeast(1)
+        val shadowSize = IntSize(safeWidth, safeHeight)
+        val outline = shapeProvider.shape.createOutline(size, layoutDirection, density)
 
-      configurePaint(shadow)
+        configurePaint(shadow)
 
-      shadowLayer.alpha = shadow.alpha
-      shadowLayer.blendMode = shadow.blendMode
-      shadowLayer.record(shadowSize) {
-        translate(radius * 2f + offsetX, radius * 2f + offsetY) {
-          val canvas = drawContext.canvas
-          canvas.drawOutline(outline, paint)
-          canvas.translate(-offsetX, -offsetY)
-          canvas.drawOutline(outline, ShadowMaskPaint)
-          canvas.translate(offsetX, offsetY)
+        shadowLayer.alpha = shadow.alpha
+        shadowLayer.blendMode = shadow.blendMode
+        shadowLayer.record(shadowSize) {
+          translate(radius * 2f + offsetX, radius * 2f + offsetY) {
+            val canvas = drawContext.canvas
+            canvas.drawOutline(outline, paint)
+            canvas.translate(-offsetX, -offsetY)
+            canvas.drawOutline(outline, ShadowMaskPaint)
+            canvas.translate(offsetX, offsetY)
+          }
         }
-      }
 
-      translate(-radius * 2f, -radius * 2f) { drawLayer(shadowLayer) }
+        translate(-radius * 2f, -radius * 2f) { drawLayer(shadowLayer) }
+      } catch (_: Throwable) {
+        // Fallback gracefully without crash
+      }
     }
 
     drawContent()

@@ -89,7 +89,7 @@ fun Modifier.liquidGlassmorphic(
         .liquidGlass(
             config = config,
             shape = shape,
-            applyEdgeEffects = true,
+            applyEdgeEffects = false,
             blurRadiusDp = blurRadiusDp
         )
         .clip(shape)

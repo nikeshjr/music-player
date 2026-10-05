@@ -26,14 +26,20 @@ internal fun DrawScope.recordLayer(
   size: IntSize = this.size.toIntSize(),
   block: DrawScope.() -> Unit
 ) {
+  val safeWidth = size.width.coerceAtLeast(1)
+  val safeHeight = size.height.coerceAtLeast(1)
   val density = node.requireDensity()
-  layer.record(size) {
-    val prevDensity = drawContext.density
-    drawContext.density = density
-    try {
-      this.block()
-    } finally {
-      drawContext.density = prevDensity
+  try {
+    layer.record(IntSize(safeWidth, safeHeight)) {
+      val prevDensity = drawContext.density
+      drawContext.density = density
+      try {
+        this.block()
+      } finally {
+        drawContext.density = prevDensity
+      }
     }
+  } catch (_: Throwable) {
+    // Graceful fallback: prevent any platform graphics layer record crash
   }
 }

@@ -313,29 +313,33 @@ private class DrawBackdropNode(
 
   private val drawBackdropLayer: DrawScope.() -> Unit = {
     val layer = graphicsLayer
-    if (layer != null) {
-      val padding = padding
-      val scale = backdropScale
+    if (layer != null && size.width > 0f && size.height > 0f) {
+      try {
+        val padding = padding
+        val scale = backdropScale
 
-      recordLayer(
-        this@DrawBackdropNode,
-        layer,
-        size =
-          IntSize(
-            ((size.width * scale).toInt() + padding.toInt() * 2).coerceAtLeast(1),
-            ((size.height * scale).toInt() + padding.toInt() * 2).coerceAtLeast(1)
-          ),
-        block = recordBackdropBlock
-      )
+        recordLayer(
+          this@DrawBackdropNode,
+          layer,
+          size =
+            IntSize(
+              ((size.width * scale).toInt() + padding.toInt() * 2).coerceAtLeast(1),
+              ((size.height * scale).toInt() + padding.toInt() * 2).coerceAtLeast(1)
+            ),
+          block = recordBackdropBlock
+        )
 
-      layer.topLeft =
-        if (padding != 0f) IntOffset(-padding.toInt(), -padding.toInt()) else IntOffset.Zero
-      if (scale != 1f) {
-        // Vendored addition: stretch the low resolution layer back over the
-        // full surface; the blur in the effect chain masks the upscaling.
-        scale(1f / scale, pivot = Offset.Zero) { drawLayer(layer) }
-      } else {
-        drawLayer(layer)
+        layer.topLeft =
+          if (padding != 0f) IntOffset(-padding.toInt(), -padding.toInt()) else IntOffset.Zero
+        if (scale != 1f) {
+          // Vendored addition: stretch the low resolution layer back over the
+          // full surface; the blur in the effect chain masks the upscaling.
+          scale(1f / scale, pivot = Offset.Zero) { drawLayer(layer) }
+        } else {
+          drawLayer(layer)
+        }
+      } catch (_: Throwable) {
+        // Fallback gracefully without crash
       }
     }
   }
@@ -351,23 +355,27 @@ private class DrawBackdropNode(
   }
 
   override fun ContentDrawScope.draw() {
-    if (effectScope.update(this, backdropScale)) {
-      updateEffects()
-    }
-
-    onDrawBehind?.invoke(this)
-    drawBackdropLayer()
-    onDrawSurface?.invoke(this)
-    drawContent()
-    onDrawFront?.invoke(this)
-
-    exportedBackdrop?.graphicsLayer?.let { layer ->
-      recordLayer(this@DrawBackdropNode, layer) {
-        onDrawBehind?.invoke(this)
-        drawBackdropLayer()
-        onDrawSurface?.invoke(this)
-        onDrawFront?.invoke(this)
+    try {
+      if (effectScope.update(this, backdropScale)) {
+        updateEffects()
       }
+
+      onDrawBehind?.invoke(this)
+      drawBackdropLayer()
+      onDrawSurface?.invoke(this)
+      drawContent()
+      onDrawFront?.invoke(this)
+
+      exportedBackdrop?.graphicsLayer?.let { layer ->
+        recordLayer(this@DrawBackdropNode, layer) {
+          onDrawBehind?.invoke(this)
+          drawBackdropLayer()
+          onDrawSurface?.invoke(this)
+          onDrawFront?.invoke(this)
+        }
+      }
+    } catch (_: Throwable) {
+      drawContent()
     }
   }
 

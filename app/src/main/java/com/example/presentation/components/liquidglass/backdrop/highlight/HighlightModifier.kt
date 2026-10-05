@@ -95,36 +95,42 @@ internal class HighlightNode(var shapeProvider: ShapeProvider, var highlight: ()
     drawContent()
 
     val highlightLayer = highlightLayer
-    if (highlightLayer != null) {
-      val size = size
-      val density: Density = this
-      val layoutDirection = layoutDirection
+    if (highlightLayer != null && size.width > 0f && size.height > 0f) {
+      try {
+        val size = size
+        val density: Density = this
+        val layoutDirection = layoutDirection
 
-      val safeSize = IntSize(ceil(size.width).toInt() + 2, ceil(size.height).toInt() + 2)
+        val safeWidth = (ceil(size.width).toInt() + 2).coerceAtLeast(1)
+        val safeHeight = (ceil(size.height).toInt() + 2).coerceAtLeast(1)
+        val safeSize = IntSize(safeWidth, safeHeight)
 
-      val outline = shapeProvider.shape.createOutline(size, layoutDirection, density)
-      val clipPath =
-        if (outline is Outline.Rounded) {
-          clipPath ?: Path().also { clipPath = it }
-        } else {
-          null
+        val outline = shapeProvider.shape.createOutline(size, layoutDirection, density)
+        val clipPath =
+          if (outline is Outline.Rounded) {
+            clipPath ?: Path().also { clipPath = it }
+          } else {
+            null
+          }
+
+        configurePaint(highlight)
+
+        highlightLayer.alpha = highlight.alpha
+        highlightLayer.blendMode = highlight.style.blendMode
+        highlightLayer.record(safeSize) {
+          translate(1f, 1f) {
+            val canvas = drawContext.canvas
+            canvas.save()
+            canvas.clipOutline(outline, clipPath)
+            canvas.drawOutline(outline, paint)
+            canvas.restore()
+          }
         }
 
-      configurePaint(highlight)
-
-      highlightLayer.alpha = highlight.alpha
-      highlightLayer.blendMode = highlight.style.blendMode
-      highlightLayer.record(safeSize) {
-        translate(1f, 1f) {
-          val canvas = drawContext.canvas
-          canvas.save()
-          canvas.clipOutline(outline, clipPath)
-          canvas.drawOutline(outline, paint)
-          canvas.restore()
-        }
+        translate(-1f, -1f) { drawLayer(highlightLayer) }
+      } catch (_: Throwable) {
+        // Fallback gracefully without crash
       }
-
-      translate(-1f, -1f) { drawLayer(highlightLayer) }
     }
   }
 

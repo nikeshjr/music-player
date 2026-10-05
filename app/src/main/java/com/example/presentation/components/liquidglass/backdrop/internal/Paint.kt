@@ -15,8 +15,12 @@ import com.example.presentation.components.liquidglass.backdrop.RuntimeShader
 import com.example.presentation.components.liquidglass.backdrop.asAndroidRuntimeShader
 
 internal fun Paint.blur(radius: Float) {
-  this.asFrameworkPaint().maskFilter =
-    if (radius > 0f) BlurMaskFilter(radius, BlurMaskFilter.Blur.NORMAL) else null
+  try {
+    this.asFrameworkPaint().maskFilter =
+      if (radius > 0f) BlurMaskFilter(radius, BlurMaskFilter.Blur.NORMAL) else null
+  } catch (_: Throwable) {
+    this.asFrameworkPaint().maskFilter = null
+  }
 }
 
 internal fun Paint.setRuntimeShader(runtimeShader: RuntimeShader?) {

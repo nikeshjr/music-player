@@ -21,10 +21,18 @@ class AuraApplication : Application() {
         AuraLog.i(TAG, "Aura Music application initializing...")
 
         // Pre-initialize Room Database singleton
-        AuraDatabase.getInstance(this)
+        try {
+            AuraDatabase.getInstance(this)
+        } catch (e: Throwable) {
+            AuraLog.e(TAG, "Room pre-init warning: ${e.message}", e)
+        }
 
         // Pre-initialize Player Controller so playback engine is immediately warm
-        com.example.service.AuraPlayerController.getInstance(this)
+        try {
+            com.example.service.AuraPlayerController.getInstance(this)
+        } catch (e: Throwable) {
+            AuraLog.e(TAG, "PlayerController pre-init warning: ${e.message}", e)
+        }
 
         // Set up crash-safe fallback to prevent overlay or background loop fatal crashes
         val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()

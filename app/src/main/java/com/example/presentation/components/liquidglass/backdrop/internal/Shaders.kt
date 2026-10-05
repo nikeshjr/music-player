@@ -49,8 +49,10 @@ float sdRoundedRect(float2 coord, float2 halfSize, float radius) {
 
 float2 gradSdRoundedRect(float2 coord, float2 halfSize, float radius) {
     float2 cornerCoord = abs(coord) - (halfSize - float2(radius));
-    if (cornerCoord.x >= 0.0 || cornerCoord.y >= 0.0) {
-        return sign(coord) * normalize(max(cornerCoord, 0.0));
+    float2 m = max(cornerCoord, 0.0);
+    float l = length(m);
+    if (l > 0.0001) {
+        return sign(coord) * (m / l);
     } else {
         float gradX = step(cornerCoord.y, cornerCoord.x);
         return sign(coord) * float2(gradX, 1.0 - gradX);
@@ -72,23 +74,30 @@ uniform float depthEffect;
 $RoundedRectSDF
 
 float circleMap(float x) {
-    return 1.0 - sqrt(1.0 - x * x);
+    float cx = clamp(x, -0.999, 0.999);
+    return 1.0 - sqrt(max(0.0, 1.0 - cx * cx));
 }
 
 half4 main(float2 coord) {
-    float2 halfSize = size * 0.5;
+    float2 halfSize = max(size * 0.5, float2(1.0, 1.0));
     float2 centeredCoord = (coord + offset) - halfSize;
     float radius = radiusAt(coord, cornerRadii);
     
     float sd = sdRoundedRect(centeredCoord, halfSize, radius);
-    if (-sd >= refractionHeight) {
+    if (-sd >= refractionHeight || refractionHeight <= 0.0) {
         return content.eval(coord);
     }
     sd = min(sd, 0.0);
     
     float d = circleMap(1.0 - -sd / refractionHeight) * refractionAmount;
     float gradRadius = min(radius * 1.5, min(halfSize.x, halfSize.y));
-    float2 grad = normalize(gradSdRoundedRect(centeredCoord, halfSize, gradRadius) + depthEffect * normalize(centeredCoord));
+    float2 rawGrad = gradSdRoundedRect(centeredCoord, halfSize, gradRadius);
+    float cLen = length(centeredCoord);
+    if (depthEffect > 0.5 && cLen > 0.0001) {
+        rawGrad += depthEffect * (centeredCoord / cLen);
+    }
+    float gLen = length(rawGrad);
+    float2 grad = (gLen > 0.0001) ? (rawGrad / gLen) : float2(0.0, 1.0);
     
     float2 refractedCoord = coord + d * grad;
     return content.eval(refractedCoord);
@@ -110,26 +119,34 @@ uniform float chromaticAberration;
 $RoundedRectSDF
 
 float circleMap(float x) {
-    return 1.0 - sqrt(1.0 - x * x);
+    float cx = clamp(x, -0.999, 0.999);
+    return 1.0 - sqrt(max(0.0, 1.0 - cx * cx));
 }
 
 half4 main(float2 coord) {
-    float2 halfSize = size * 0.5;
+    float2 halfSize = max(size * 0.5, float2(1.0, 1.0));
     float2 centeredCoord = (coord + offset) - halfSize;
     float radius = radiusAt(coord, cornerRadii);
     
     float sd = sdRoundedRect(centeredCoord, halfSize, radius);
-    if (-sd >= refractionHeight) {
+    if (-sd >= refractionHeight || refractionHeight <= 0.0) {
         return content.eval(coord);
     }
     sd = min(sd, 0.0);
     
     float d = circleMap(1.0 - -sd / refractionHeight) * refractionAmount;
     float gradRadius = min(radius * 1.5, min(halfSize.x, halfSize.y));
-    float2 grad = normalize(gradSdRoundedRect(centeredCoord, halfSize, gradRadius) + depthEffect * normalize(centeredCoord));
+    float2 rawGrad = gradSdRoundedRect(centeredCoord, halfSize, gradRadius);
+    float cLen = length(centeredCoord);
+    if (depthEffect > 0.5 && cLen > 0.0001) {
+        rawGrad += depthEffect * (centeredCoord / cLen);
+    }
+    float gLen = length(rawGrad);
+    float2 grad = (gLen > 0.0001) ? (rawGrad / gLen) : float2(0.0, 1.0);
     
     float2 refractedCoord = coord + d * grad;
-    float dispersionIntensity = chromaticAberration * ((centeredCoord.x * centeredCoord.y) / (halfSize.x * halfSize.y));
+    float denom = max(halfSize.x * halfSize.y, 1.0);
+    float dispersionIntensity = chromaticAberration * clamp((centeredCoord.x * centeredCoord.y) / denom, -1.0, 1.0);
     float2 dispersedCoord = d * grad * dispersionIntensity;
     
     half4 color = half4(0.0);
@@ -189,7 +206,7 @@ half4 main(float2 coord) {
     float2 grad = gradSdRoundedRect(centeredCoord, halfSize, gradRadius);
     float2 normal = float2(cos(angle), sin(angle));
     float d = dot(grad, normal);
-    float intensity = pow(abs(d), falloff);
+    float intensity = pow(clamp(abs(d), 0.0, 1.0), max(0.1, falloff));
     return color * intensity;
 }"""
 
@@ -204,7 +221,7 @@ uniform float falloff;
 $RoundedRectSDF
 
 half4 main(float2 coord) {
-    float2 halfSize = size * 0.5;
+    float2 halfSize = max(size * 0.5, float2(1.0, 1.0));
     float2 centeredCoord = coord - halfSize;
     float radius = radiusAt(coord, cornerRadii);
     
@@ -212,7 +229,7 @@ half4 main(float2 coord) {
     float2 grad = gradSdRoundedRect(centeredCoord, halfSize, gradRadius);
     float2 normal = float2(cos(angle), sin(angle));
     float d = dot(grad, normal);
-    float intensity = pow(abs(d), falloff);
+    float intensity = pow(clamp(abs(d), 0.0, 1.0), max(0.1, falloff));
     float t = step(0.0, d);
     return half4(t, t, t, 1.0) * intensity;
 }"""
