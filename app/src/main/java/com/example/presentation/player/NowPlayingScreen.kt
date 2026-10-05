@@ -189,11 +189,11 @@ fun NowPlayingScreen(
                         detectVerticalDragGestures(
                             onDragStart = { dragAccumulatorY = 0f },
                             onVerticalDrag = { change, dragAmount ->
-                                change.consume()
                                 dragAccumulatorY += dragAmount
-                                val threshold = 32f // px per volume step
+                                val threshold = 36f // px per volume step
 
                                 if (dragAccumulatorY <= -threshold) { // Swipe UP -> Increase Volume
+                                    change.consume()
                                     audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_RAISE, 0)
                                     val current = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
                                     volumeIndicator = (current * 100) / maxVolume
@@ -204,6 +204,7 @@ fun NowPlayingScreen(
                                         volumeIndicator = null
                                     }
                                 } else if (dragAccumulatorY >= threshold) { // Swipe DOWN -> Decrease Volume
+                                    change.consume()
                                     audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_LOWER, 0)
                                     val current = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
                                     volumeIndicator = (current * 100) / maxVolume

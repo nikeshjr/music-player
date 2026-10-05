@@ -330,16 +330,21 @@ class AuraPlayerController private constructor(private val context: Context) {
 
     private fun startPositionTicker() {
         positionTickerJob?.cancel()
-        positionTickerJob = scope.launch {
+        positionTickerJob = scope.launch(Dispatchers.Default) {
             while (isActive) {
                 exoPlayer?.let { p ->
-                    _uiState.value = _uiState.value.copy(
-                        currentPositionMs = p.currentPosition,
-                        durationMs = p.duration.coerceAtLeast(0L),
-                        bufferedPositionMs = p.bufferedPosition
-                    )
+                    if (p.isPlaying) {
+                        val pos = p.currentPosition
+                        val dur = p.duration.coerceAtLeast(0L)
+                        val buf = p.bufferedPosition
+                        _uiState.value = _uiState.value.copy(
+                            currentPositionMs = pos,
+                            durationMs = dur,
+                            bufferedPositionMs = buf
+                        )
+                    }
                 }
-                delay(16L) // ~60fps smooth seekbar progress
+                delay(200L) // Smooth 5Hz seekbar updates without blocking Main Looper
             }
         }
     }

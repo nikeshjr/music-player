@@ -53,6 +53,7 @@ import com.example.core.theme.AuraTheme
 import com.example.domain.model.PlayerUiState
 import com.example.presentation.components.AuraArtworkImage
 import com.example.presentation.components.glassmorphic
+import com.example.presentation.components.liquidGlassmorphic
 import kotlinx.coroutines.delay
 
 /**
@@ -117,45 +118,24 @@ fun DynamicIslandContent(
         modifier = modifier
             .width(animatedWidth)
             .height(animatedHeight)
-            .glassmorphic(
+            .liquidGlassmorphic(
                 shape = RoundedCornerShape(layoutConfig.cornerRadiusDp.dp),
                 tint = theme.islandColor,
                 tintAlpha = layoutConfig.opacity,
                 borderBrightness = 0.35f,
-                elevation = 14.dp
+                elevation = 14.dp,
+                blurRadiusDp = 14f,
+                lensAmount = 0.5f,
+                chromaticAberration = true
             )
-            .pointerInput(currentState) {
-                detectTapGestures(
-                    onTap = {
-                        lastInteractionTime = System.currentTimeMillis()
-                        when (currentState) {
-                            IslandState.IDLE_PILL -> onStateChange(IslandState.COMPACT)
-                            IslandState.COMPACT -> onStateChange(IslandState.LARGE_CARD)
-                            IslandState.LARGE_CARD -> onOpenApp()
-                        }
-                    },
-                    onLongPress = {
-                        lastInteractionTime = System.currentTimeMillis()
-                        if (currentState != IslandState.LARGE_CARD) {
-                            onStateChange(IslandState.LARGE_CARD)
-                        } else {
-                            onOpenApp()
-                        }
-                    }
-                )
-            }
-            .pointerInput(currentState) {
-                // Swipe gestures: left = next, right = prev
-                detectHorizontalDragGestures(
-                    onHorizontalDrag = { _, dragAmount ->
-                        lastInteractionTime = System.currentTimeMillis()
-                        dragDeltaX += dragAmount
-                    },
-                    onDragEnd = {
-                        if (dragDeltaX > 50f) onPrevious() else if (dragDeltaX < -50f) onNext()
-                        dragDeltaX = 0f
-                    }
-                )
+            .clip(RoundedCornerShape(layoutConfig.cornerRadiusDp.dp))
+            .clickable {
+                lastInteractionTime = System.currentTimeMillis()
+                when (currentState) {
+                    IslandState.IDLE_PILL -> onStateChange(IslandState.COMPACT)
+                    IslandState.COMPACT -> onStateChange(IslandState.LARGE_CARD)
+                    IslandState.LARGE_CARD -> onOpenApp()
+                }
             },
         contentAlignment = Alignment.Center
     ) {

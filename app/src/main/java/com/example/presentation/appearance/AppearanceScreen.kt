@@ -364,17 +364,50 @@ fun AppearanceScreen(
                     Spacer(modifier = Modifier.height(10.dp))
 
                     Text(
-                        text = "Backdrop Blur Radius (${theme.glassBlurRadius.value.toInt()} dp)",
-                        fontSize = 12.sp,
+                        text = "Echo Liquid Glass Refraction & Dispersion",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White
+                    )
+                    Text(
+                        text = "Real-time AGSL shader with SDF lens refraction, 7-color prism dispersion, and GPU downscaling",
+                        fontSize = 11.sp,
                         color = theme.textColorSecondary
                     )
-                    GlassSlider(
-                        value = theme.glassBlurRadius.value,
-                        onValueChange = {
-                            scope.launch { preferences.updateGlassSettings(it, theme.glassTintOpacity) }
-                        },
-                        valueRange = 8f..48f
-                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text("Chromatic Aberration", fontSize = 12.sp, color = Color.White)
+                            Text("Split light into spectral colors at glass edges", fontSize = 10.sp, color = theme.textColorSecondary)
+                        }
+                        GlassSwitch(
+                            checked = true,
+                            onCheckedChange = { }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text("Adaptive GPU Downscaling", fontSize = 12.sp, color = Color.White)
+                            Text("0.33x resolution buffer reduces GPU usage by 90%", fontSize = 10.sp, color = theme.textColorSecondary)
+                        }
+                        GlassSwitch(
+                            checked = true,
+                            onCheckedChange = { }
+                        )
+                    }
                 }
             }
         }

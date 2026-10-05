@@ -118,9 +118,13 @@ class DynamicIslandService : Service(), LifecycleOwner, ViewModelStoreOwner, Sav
                 WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
                 WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
 
+        val density = resources.displayMetrics.density
+        val initWidth = (212 * layoutConfig.scaleMultiplier * density).toInt()
+        val initHeight = (44 * layoutConfig.scaleMultiplier * density).toInt()
+
         val params = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.WRAP_CONTENT,
+            initWidth,
+            initHeight,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             flags,
             PixelFormat.TRANSLUCENT
@@ -188,10 +192,23 @@ class DynamicIslandService : Service(), LifecycleOwner, ViewModelStoreOwner, Sav
 
     private fun updateWindowFlags(isExpanded: Boolean) {
         val params = windowLayoutParams ?: return
+        val density = resources.displayMetrics.density
+        val scale = layoutConfig.scaleMultiplier
+
         if (isExpanded) {
-            params.flags = params.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+            params.width = (350 * scale * density).toInt()
+            params.height = (190 * scale * density).toInt()
+            params.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
+                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
         } else {
-            params.flags = params.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL.inv()
+            params.width = (212 * scale * density).toInt()
+            params.height = (44 * scale * density).toInt()
+            params.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
+                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
         }
         windowManager?.updateViewLayout(overlayView, params)
     }

@@ -42,11 +42,72 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.shape.CornerBasedShape
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.core.motion.AuraMotion
 import com.example.core.theme.AuraTheme
+import com.example.presentation.components.liquidglass.GlassEffectConfig
+import com.example.presentation.components.liquidglass.LocalGlassEffectConfig
+import com.example.presentation.components.liquidglass.liquidGlass
+
+/**
+ * Modifier.liquidGlassmorphic: Echo Music Liquid Glass with AGSL Refraction,
+ * Chromatic Dispersion, Specular Rim Lighting and adaptive fallback.
+ */
+@Composable
+fun Modifier.liquidGlassmorphic(
+    shape: CornerBasedShape = RoundedCornerShape(20.dp),
+    tint: Color = AuraTheme.current.surfaceColor,
+    tintAlpha: Float = AuraTheme.current.glassTintOpacity,
+    borderBrightness: Float = AuraTheme.current.glassBorderBrightness,
+    elevation: Dp = 8.dp,
+    blurRadiusDp: Float = 10f,
+    lensAmount: Float = 0.5f,
+    chromaticAberration: Boolean = true
+): Modifier {
+    val config = LocalGlassEffectConfig.current.copy(
+        globalEnabled = true,
+        vibrancy = 1.3f,
+        blurRadius = blurRadiusDp,
+        lensHeight = 0.5f,
+        lensAmount = lensAmount,
+        chromaticAberration = chromaticAberration,
+        depthEffect = true,
+        surfaceTintColor = tint,
+        surfaceOpacity = tintAlpha
+    )
+
+    return this
+        .shadow(
+            elevation = elevation,
+            shape = shape,
+            ambientColor = Color.Black.copy(alpha = 0.35f),
+            spotColor = Color.Black.copy(alpha = 0.5f)
+        )
+        .liquidGlass(
+            config = config,
+            shape = shape,
+            applyEdgeEffects = true,
+            blurRadiusDp = blurRadiusDp
+        )
+        .clip(shape)
+        .background(tint.copy(alpha = tintAlpha))
+        .border(
+            border = BorderStroke(
+                width = 1.dp,
+                brush = Brush.linearGradient(
+                    colors = listOf(
+                        Color.White.copy(alpha = borderBrightness),
+                        Color.White.copy(alpha = borderBrightness * 0.15f),
+                        Color.Transparent
+                    )
+                )
+            ),
+            shape = shape
+        )
+}
 
 /**
  * Modifier.glassmorphic: Core glassmorphism modifier that applies specular linear gradient borders,
@@ -137,58 +198,55 @@ fun GlassSurface(
 }
 
 /**
- * GlassCard: Clickable glass card with responsive elevation and touch feedback.
+ * GlassCard: Clickable glass card with responsive elevation, touch feedback, and Echo liquid glass.
  */
 @Composable
 fun GlassCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    shape: Shape = RoundedCornerShape(AuraTheme.current.globalCornerRadius),
+    shape: CornerBasedShape = RoundedCornerShape(AuraTheme.current.globalCornerRadius),
     tint: Color = AuraTheme.current.surfaceColor,
     content: @Composable BoxScope.() -> Unit
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
     Box(
         modifier = modifier
-            .glassmorphic(
+            .liquidGlassmorphic(
                 shape = shape,
                 tint = tint,
                 tintAlpha = AuraTheme.current.glassTintOpacity,
                 borderBrightness = AuraTheme.current.glassBorderBrightness,
-                elevation = 6.dp
+                elevation = 4.dp
             )
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onClick
-            )
+            .clip(shape)
+            .clickable(onClick = onClick)
     ) {
         content()
     }
 }
 
 /**
- * GlassButton: Premium glassmorphic button with customizable accent colors.
+ * GlassButton: Premium glassmorphic button with customizable accent colors and liquid glass.
  */
 @Composable
 fun GlassButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    shape: Shape = RoundedCornerShape(16.dp),
+    shape: CornerBasedShape = RoundedCornerShape(16.dp),
     accentColor: Color = AuraTheme.current.primaryColor,
     content: @Composable () -> Unit
 ) {
     Box(
         modifier = modifier
-            .glassmorphic(
+            .liquidGlassmorphic(
                 shape = shape,
                 tint = accentColor,
                 tintAlpha = 0.28f,
                 borderBrightness = 0.4f,
                 elevation = 4.dp
             )
+            .clip(shape)
             .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 10.dp),
         contentAlignment = Alignment.Center
     ) {
         content()
@@ -308,12 +366,15 @@ fun GlassBottomBar(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 12.dp)
-            .glassmorphic(
+            .liquidGlassmorphic(
                 shape = RoundedCornerShape(26.dp),
                 tint = theme.surfaceColor,
                 tintAlpha = 0.35f,
                 borderBrightness = 0.3f,
-                elevation = 16.dp
+                elevation = 16.dp,
+                blurRadiusDp = 12f,
+                lensAmount = 0.5f,
+                chromaticAberration = true
             )
             .padding(horizontal = 8.dp, vertical = 6.dp)
     ) {

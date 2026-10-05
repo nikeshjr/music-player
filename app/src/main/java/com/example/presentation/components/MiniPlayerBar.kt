@@ -59,12 +59,15 @@ fun MiniPlayerBar(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp)
-            .glassmorphic(
+            .liquidGlassmorphic(
                 shape = RoundedCornerShape(22.dp),
                 tint = theme.surfaceColor,
                 tintAlpha = 0.40f,
                 borderBrightness = 0.35f,
-                elevation = 12.dp
+                elevation = 12.dp,
+                blurRadiusDp = 12f,
+                lensAmount = 0.5f,
+                chromaticAberration = true
             )
             .clickable(onClick = onClick)
             .pointerInput(Unit) {
