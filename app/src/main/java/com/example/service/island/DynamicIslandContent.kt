@@ -118,15 +118,12 @@ fun DynamicIslandContent(
         modifier = modifier
             .width(animatedWidth)
             .height(animatedHeight)
-            .liquidGlassmorphic(
+            .glassmorphic(
                 shape = RoundedCornerShape(layoutConfig.cornerRadiusDp.dp),
                 tint = theme.islandColor,
                 tintAlpha = layoutConfig.opacity,
                 borderBrightness = 0.35f,
-                elevation = 14.dp,
-                blurRadiusDp = 14f,
-                lensAmount = 0.5f,
-                chromaticAberration = true
+                elevation = 14.dp
             )
             .clip(RoundedCornerShape(layoutConfig.cornerRadiusDp.dp))
             .clickable {

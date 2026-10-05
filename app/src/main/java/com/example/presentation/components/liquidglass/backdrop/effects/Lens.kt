@@ -35,38 +35,35 @@ fun BackdropEffectScope.lens(
   }
 
   val cornerRadii = cornerRadii
-  val effect =
-    if (cornerRadii != null) {
-      val shader =
-        if (!chromaticAberration) {
-          obtainRuntimeShader("Refraction", RoundedRectRefractionShaderString)
-        } else {
-          obtainRuntimeShader(
-            "RefractionWithDispersion",
-            RoundedRectRefractionWithDispersionShaderString
-          )
+  if (cornerRadii != null) {
+      try {
+        val shader =
+          if (!chromaticAberration) {
+            obtainRuntimeShader("Refraction", RoundedRectRefractionShaderString)
+          } else {
+            obtainRuntimeShader(
+              "RefractionWithDispersion",
+              RoundedRectRefractionWithDispersionShaderString
+            )
+          }
+        shader.apply {
+          setFloatUniform("size", size.width, size.height)
+          setFloatUniform("offset", -padding, -padding)
+          setFloatUniform("cornerRadii", cornerRadii)
+          setFloatUniform("refractionHeight", refractionHeight)
+          setFloatUniform("refractionAmount", -refractionAmount)
+          setFloatUniform("depthEffect", if (depthEffect) 1f else 0f)
+          if (chromaticAberration) {
+            setFloatUniform("chromaticAberration", 1f)
+          }
         }
-      shader.apply {
-        setFloatUniform("size", size.width, size.height)
-        setFloatUniform("offset", -padding, -padding)
-        setFloatUniform("cornerRadii", cornerRadii)
-        setFloatUniform("refractionHeight", refractionHeight)
-        setFloatUniform("refractionAmount", -refractionAmount)
-        setFloatUniform("depthEffect", if (depthEffect) 1f else 0f)
-        if (chromaticAberration) {
-          setFloatUniform("chromaticAberration", 1f)
-        }
+        effect(RuntimeShaderEffect(shader, "content"))
+      } catch (_: Throwable) {
+        // Fallback gracefully without crash
       }
-      RuntimeShaderEffect(shader, "content")
-    } else {
-      throwUnsupportedSDFException()
     }
-  effect(effect)
 }
 
-// Vendored change: support for io.github.kyant0:shapes' RoundedRectangularShape was
-// dropped so the vendored sources have no external dependency; this app only passes
-// CornerBasedShape here.
 private val BackdropEffectScope.cornerRadii: FloatArray?
   get() =
     when (val shape = shape) {
@@ -103,9 +100,3 @@ private val BackdropEffectScope.cornerRadii: FloatArray?
       }
       else -> null
     }
-
-private fun throwUnsupportedSDFException(): Nothing {
-  throw UnsupportedOperationException(
-    "Only RoundedRectangularShape or CornerBasedShape is supported in lens effects."
-  )
-}

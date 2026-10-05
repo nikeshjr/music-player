@@ -198,19 +198,19 @@ fun GlassSurface(
 }
 
 /**
- * GlassCard: Clickable glass card with responsive elevation, touch feedback, and Echo liquid glass.
+ * GlassCard: Clickable glass card with responsive elevation, touch feedback, and crisp glassmorphic style.
  */
 @Composable
 fun GlassCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    shape: CornerBasedShape = RoundedCornerShape(AuraTheme.current.globalCornerRadius),
+    shape: Shape = RoundedCornerShape(AuraTheme.current.globalCornerRadius),
     tint: Color = AuraTheme.current.surfaceColor,
     content: @Composable BoxScope.() -> Unit
 ) {
     Box(
         modifier = modifier
-            .liquidGlassmorphic(
+            .glassmorphic(
                 shape = shape,
                 tint = tint,
                 tintAlpha = AuraTheme.current.glassTintOpacity,
@@ -225,19 +225,19 @@ fun GlassCard(
 }
 
 /**
- * GlassButton: Premium glassmorphic button with customizable accent colors and liquid glass.
+ * GlassButton: Premium glassmorphic button with customizable accent colors.
  */
 @Composable
 fun GlassButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    shape: CornerBasedShape = RoundedCornerShape(16.dp),
+    shape: Shape = RoundedCornerShape(16.dp),
     accentColor: Color = AuraTheme.current.primaryColor,
     content: @Composable () -> Unit
 ) {
     Box(
         modifier = modifier
-            .liquidGlassmorphic(
+            .glassmorphic(
                 shape = shape,
                 tint = accentColor,
                 tintAlpha = 0.28f,
@@ -366,15 +366,12 @@ fun GlassBottomBar(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 12.dp)
-            .liquidGlassmorphic(
+            .glassmorphic(
                 shape = RoundedCornerShape(26.dp),
                 tint = theme.surfaceColor,
                 tintAlpha = 0.35f,
                 borderBrightness = 0.3f,
-                elevation = 16.dp,
-                blurRadiusDp = 12f,
-                lensAmount = 0.5f,
-                chromaticAberration = true
+                elevation = 16.dp
             )
             .padding(horizontal = 8.dp, vertical = 6.dp)
     ) {

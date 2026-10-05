@@ -190,75 +190,67 @@ fun AuraAppShell(
     val controller = remember { AuraPlayerController.getInstance(context) }
     val uiState by controller.uiState.collectAsState()
     val theme = AuraTheme.current
-    val appBackdrop = com.example.presentation.components.liquidglass.backdrop.backdrops.rememberLayerBackdrop {
-        drawRect(theme.backgroundColor)
-        drawContent()
-    }
 
-    androidx.compose.runtime.CompositionLocalProvider(
-        com.example.presentation.components.liquidglass.LocalAppBackdrop provides appBackdrop
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            theme.backgroundColor,
-                            Color(0xFF070810),
-                            Color(0xFF030408)
-                        )
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        theme.backgroundColor,
+                        Color(0xFF070810),
+                        Color(0xFF030408)
                     )
                 )
-        ) {
-            Scaffold(
-                containerColor = Color.Transparent,
-                bottomBar = {
-                    Column {
-                        // Persistent Mini Player above bottom bar with Echo Liquid Glass
-                        if (uiState.currentSong != null) {
-                            MiniPlayerBar(
-                                uiState = uiState,
-                                onClick = onOpenNowPlaying,
-                                onPlayPause = { controller.togglePlayPause() },
-                                onNext = { controller.next() },
-                                onPrevious = { controller.previous() }
-                            )
-                        }
+            )
+    ) {
+        Scaffold(
+            containerColor = Color.Transparent,
+            bottomBar = {
+                Column {
+                    // Persistent Mini Player above bottom bar with glassmorphic styling
+                    if (uiState.currentSong != null) {
+                        MiniPlayerBar(
+                            uiState = uiState,
+                            onClick = onOpenNowPlaying,
+                            onPlayPause = { controller.togglePlayPause() },
+                            onNext = { controller.next() },
+                            onPrevious = { controller.previous() }
+                        )
+                    }
 
-                        // Floating Glass Bottom Bar with Echo Liquid Glass
-                        GlassBottomBar {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceAround,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                GlassChip(
-                                    text = "Library",
-                                    isSelected = currentTab == "library",
-                                    onClick = { onTabSelected("library") }
-                                )
-                                GlassChip(
-                                    text = "Dashboard",
-                                    isSelected = currentTab == "dashboard",
-                                    onClick = { onTabSelected("dashboard") }
-                                )
-                                GlassChip(
-                                    text = "Styling",
-                                    isSelected = currentTab == "appearance",
-                                    onClick = onOpenAppearance
-                                )
-                            }
+                    // Floating Glass Bottom Bar
+                    GlassBottomBar {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceAround,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            GlassChip(
+                                text = "Library",
+                                isSelected = currentTab == "library",
+                                onClick = { onTabSelected("library") }
+                            )
+                            GlassChip(
+                                text = "Dashboard",
+                                isSelected = currentTab == "dashboard",
+                                onClick = { onTabSelected("dashboard") }
+                            )
+                            GlassChip(
+                                text = "Styling",
+                                isSelected = currentTab == "appearance",
+                                onClick = onOpenAppearance
+                            )
                         }
                     }
                 }
-            ) { paddingValues ->
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .layerBackdrop(appBackdrop)
-                        .padding(paddingValues)
-                ) {
+            }
+        ) { paddingValues ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+            ) {
                     if (currentTab == "library") {
                         LibraryScreen(
                             onSongClick = { onOpenNowPlaying() }
@@ -276,7 +268,6 @@ fun AuraAppShell(
             }
         }
     }
-}
 
 @Composable
 fun AuraDashboardContent(
