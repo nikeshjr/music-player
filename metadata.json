@@ -1,0 +1,6 @@
+{
+  "name": "Aura Music",
+  "description": "Universal 100% offline music player with persistent Dynamic Island overlay, ultra-premium glassmorphism, and Hi-Res FLAC support.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
