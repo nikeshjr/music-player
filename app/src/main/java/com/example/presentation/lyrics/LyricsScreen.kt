@@ -92,11 +92,19 @@ fun LyricsScreen(
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
-                    colors = listOf(
-                        theme.primaryColor.copy(alpha = 0.3f),
-                        theme.backgroundColor,
-                        Color(0xFF030408)
-                    )
+                    colors = if (theme.isLight) {
+                        listOf(
+                            theme.primaryColor.copy(alpha = 0.15f),
+                            theme.backgroundColor,
+                            Color(0xFFE2E8F0)
+                        )
+                    } else {
+                        listOf(
+                            theme.primaryColor.copy(alpha = 0.3f),
+                            theme.backgroundColor,
+                            Color(0xFF030408)
+                        )
+                    }
                 )
             )
             .statusBarsPadding()

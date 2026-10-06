@@ -103,65 +103,93 @@ class MainActivity : ComponentActivity() {
             AuraThemeProvider(themeState = themeState) {
                 var currentScreen by remember { mutableStateOf("library") }
 
-                Crossfade(
-                    targetState = Pair(isOnboardingCompleted, currentScreen),
-                    animationSpec = tween(350),
-                    label = "MainScreenTransition"
-                ) { (completed, screen) ->
-                    if (!completed) {
-                        OnboardingScreen(
-                            onFinished = {
-                                AuraLog.i("MainActivity", "Onboarding completed by user.")
-                            }
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = if (themeState.isLight) {
+                                    listOf(
+                                        themeState.backgroundColor,
+                                        Color(0xFFEFF2F8),
+                                        Color(0xFFE2E8F0)
+                                    )
+                                } else if (themeState.isAmoled) {
+                                    listOf(
+                                        Color.Black,
+                                        Color.Black,
+                                        Color.Black
+                                    )
+                                } else {
+                                    listOf(
+                                        themeState.backgroundColor,
+                                        Color(0xFF070810),
+                                        Color(0xFF030408)
+                                    )
+                                }
+                            )
                         )
-                    } else {
-                        when (screen) {
-                            "now_playing" -> {
-                                BackHandler { currentScreen = "library" }
-                                NowPlayingScreen(
-                                    onNavigateBack = { currentScreen = "library" },
-                                    onOpenLyrics = { currentScreen = "lyrics" },
-                                    onOpenQueue = { currentScreen = "queue" },
-                                    onOpenEqualizer = { currentScreen = "audio_inspector" }
-                                )
-                            }
-                            "lyrics" -> {
-                                BackHandler { currentScreen = "now_playing" }
-                                LyricsScreen(onNavigateBack = { currentScreen = "now_playing" })
-                            }
-                            "queue" -> {
-                                BackHandler { currentScreen = "now_playing" }
-                                QueueScreen(onNavigateBack = { currentScreen = "now_playing" })
-                            }
-                            "appearance" -> {
-                                BackHandler { currentScreen = "library" }
-                                AppearanceScreen(onNavigateBack = { currentScreen = "library" })
-                            }
-                            "library_inspector" -> {
-                                BackHandler { currentScreen = "dashboard" }
-                                LibraryInspectorScreen(onNavigateBack = { currentScreen = "dashboard" })
-                            }
-                            "audio_inspector" -> {
-                                BackHandler { currentScreen = "dashboard" }
-                                AudioEngineInspectionScreen(onNavigateBack = { currentScreen = "dashboard" })
-                            }
-                            "island_calibration" -> {
-                                BackHandler { currentScreen = "dashboard" }
-                                IslandCalibrationScreen(onNavigateBack = { currentScreen = "dashboard" })
-                            }
-                            else -> {
-                                AuraAppShell(
-                                    currentTab = screen,
-                                    onTabSelected = { currentScreen = it },
-                                    onOpenNowPlaying = { currentScreen = "now_playing" },
-                                    onOpenAppearance = { currentScreen = "appearance" },
-                                    onOpenLibraryInspector = { currentScreen = "library_inspector" },
-                                    onOpenAudioInspector = { currentScreen = "audio_inspector" },
-                                    onOpenIslandCalibration = { currentScreen = "island_calibration" },
-                                    onResetOnboarding = {
-                                        scope.launch { preferences.setOnboardingCompleted(false) }
-                                    }
-                                )
+                ) {
+                    Crossfade(
+                        targetState = Pair(isOnboardingCompleted, currentScreen),
+                        animationSpec = tween(350),
+                        label = "MainScreenTransition"
+                    ) { (completed, screen) ->
+                        if (!completed) {
+                            OnboardingScreen(
+                                onFinished = {
+                                    AuraLog.i("MainActivity", "Onboarding completed by user.")
+                                }
+                            )
+                        } else {
+                            when (screen) {
+                                "now_playing" -> {
+                                    BackHandler { currentScreen = "library" }
+                                    NowPlayingScreen(
+                                        onNavigateBack = { currentScreen = "library" },
+                                        onOpenLyrics = { currentScreen = "lyrics" },
+                                        onOpenQueue = { currentScreen = "queue" },
+                                        onOpenEqualizer = { currentScreen = "audio_inspector" }
+                                    )
+                                }
+                                "lyrics" -> {
+                                    BackHandler { currentScreen = "now_playing" }
+                                    LyricsScreen(onNavigateBack = { currentScreen = "now_playing" })
+                                }
+                                "queue" -> {
+                                    BackHandler { currentScreen = "now_playing" }
+                                    QueueScreen(onNavigateBack = { currentScreen = "now_playing" })
+                                }
+                                "appearance" -> {
+                                    BackHandler { currentScreen = "library" }
+                                    AppearanceScreen(onNavigateBack = { currentScreen = "library" })
+                                }
+                                "library_inspector" -> {
+                                    BackHandler { currentScreen = "dashboard" }
+                                    LibraryInspectorScreen(onNavigateBack = { currentScreen = "dashboard" })
+                                }
+                                "audio_inspector" -> {
+                                    BackHandler { currentScreen = "dashboard" }
+                                    AudioEngineInspectionScreen(onNavigateBack = { currentScreen = "dashboard" })
+                                }
+                                "island_calibration" -> {
+                                    BackHandler { currentScreen = "dashboard" }
+                                    IslandCalibrationScreen(onNavigateBack = { currentScreen = "dashboard" })
+                                }
+                                else -> {
+                                    AuraAppShell(
+                                        currentTab = screen,
+                                        onTabSelected = { currentScreen = it },
+                                        onOpenNowPlaying = { currentScreen = "now_playing" },
+                                        onOpenAppearance = { currentScreen = "appearance" },
+                                        onOpenLibraryInspector = { currentScreen = "library_inspector" },
+                                        onOpenAudioInspector = { currentScreen = "audio_inspector" },
+                                        onOpenIslandCalibration = { currentScreen = "island_calibration" },
+                                        onResetOnboarding = {
+                                            scope.launch { preferences.setOnboardingCompleted(false) }
+                                        }
+                                    )
+                                }
                             }
                         }
                     }

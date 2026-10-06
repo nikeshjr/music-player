@@ -215,7 +215,7 @@ fun IslandCalibrationScreen(
                     .fillMaxWidth()
                     .height(230.dp)
                     .clip(RoundedCornerShape(20.dp))
-                    .background(Color(0xFF070810))
+                    .background(if (theme.isLight) Color(0xFF1E293B) else Color(0xFF070810))
                     .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(20.dp)),
                 contentAlignment = Alignment.TopCenter
             ) {
