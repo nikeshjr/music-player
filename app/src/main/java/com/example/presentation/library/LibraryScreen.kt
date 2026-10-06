@@ -416,7 +416,7 @@ fun LibraryScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(filteredSongs) { song ->
+                    items(filteredSongs, key = { it.id }) { song ->
                         SongListItem(
                             song = song,
                             onClick = {
@@ -439,7 +439,7 @@ fun LibraryScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(albums) { album ->
+                    items(albums, key = { it.title }) { album ->
                         AlbumCard(album = album)
                     }
                 }
@@ -454,7 +454,7 @@ fun LibraryScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(artists) { artist ->
+                    items(artists, key = { it.name }) { artist ->
                         ArtistListItem(artist = artist)
                     }
                 }

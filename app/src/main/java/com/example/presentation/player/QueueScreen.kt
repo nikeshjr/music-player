@@ -105,7 +105,7 @@ fun QueueScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.fillMaxSize()
         ) {
-            itemsIndexed(queue) { index, track ->
+            itemsIndexed(queue, key = { _, track -> track.id }) { index, track ->
                 val isCurrent = track.id == uiState.currentSong?.id
 
                 GlassCard(
