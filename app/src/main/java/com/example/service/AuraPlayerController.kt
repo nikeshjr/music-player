@@ -117,29 +117,68 @@ class AuraPlayerController private constructor(private val context: Context) {
         exoPlayer = player
         crossfadeManager = CrossfadePlayerManager(player)
 
-        // Attach audio effects to audioSessionId
-        audioEffectsManager.attachToAudioSession(player.audioSessionId)
+        // Attach audio effects immediately if audio session is valid
+        if (player.audioSessionId > 0) {
+            audioEffectsManager.attachToAudioSession(player.audioSessionId)
+        }
+
+        player.addAnalyticsListener(object : androidx.media3.exoplayer.analytics.AnalyticsListener {
+            override fun onAudioSessionIdChanged(
+                eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
+                audioSessionId: Int
+            ) {
+                AuraLog.i(TAG, "AnalyticsListener onAudioSessionIdChanged: $audioSessionId")
+                if (audioSessionId > 0) {
+                    audioEffectsManager.attachToAudioSession(audioSessionId)
+                }
+            }
+        })
 
         player.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
+                val dur = player.duration.coerceAtLeast(0L)
                 _uiState.value = _uiState.value.copy(
                     isPlaying = isPlaying,
                     currentPositionMs = player.currentPosition,
-                    durationMs = player.duration.coerceAtLeast(0L)
+                    durationMs = if (dur > 0) dur else _uiState.value.durationMs
                 )
                 com.example.widget.AuraMediaWidget.updateAllWidgets(context)
-                if (isPlaying) startPositionTicker() else stopPositionTicker()
+                if (isPlaying) {
+                    startPositionTicker()
+                    if (player.audioSessionId > 0) {
+                        audioEffectsManager.attachToAudioSession(player.audioSessionId)
+                    }
+                } else {
+                    stopPositionTicker()
+                }
             }
 
             override fun onPlaybackStateChanged(playbackState: Int) {
+                val dur = player.duration.coerceAtLeast(0L)
                 if (playbackState == Player.STATE_ENDED) {
                     sleepTimerManager.onTrackCompleted()
+                    _uiState.value = _uiState.value.copy(
+                        isPlaying = false,
+                        currentPositionMs = _uiState.value.durationMs
+                    )
+                    stopPositionTicker()
+                } else if (playbackState == Player.STATE_READY) {
+                    if (player.audioSessionId > 0) {
+                        audioEffectsManager.attachToAudioSession(player.audioSessionId)
+                    }
+                    _uiState.value = _uiState.value.copy(
+                        isPlaying = player.isPlaying,
+                        currentPositionMs = player.currentPosition,
+                        durationMs = if (dur > 0) dur else _uiState.value.durationMs,
+                        bufferedPositionMs = player.bufferedPosition
+                    )
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        isPlaying = player.isPlaying,
+                        currentPositionMs = player.currentPosition,
+                        bufferedPositionMs = player.bufferedPosition
+                    )
                 }
-                _uiState.value = _uiState.value.copy(
-                    currentPositionMs = player.currentPosition,
-                    durationMs = player.duration.coerceAtLeast(0L),
-                    bufferedPositionMs = player.bufferedPosition
-                )
             }
 
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
@@ -152,7 +191,8 @@ class AuraPlayerController private constructor(private val context: Context) {
                         currentSong = activeSong,
                         queueIndex = currentIdx,
                         durationMs = activeSong.durationMs,
-                        isFavorite = activeSong.isFavorite
+                        isFavorite = activeSong.isFavorite,
+                        currentPositionMs = 0L
                     )
                     // Apply ReplayGain loudness normalization if present
                     val multiplier = audioEffectsManager.calculateReplayGainMultiplier(
@@ -161,12 +201,17 @@ class AuraPlayerController private constructor(private val context: Context) {
                     )
                     player.volume = multiplier
                     com.example.widget.AuraMediaWidget.updateAllWidgets(context)
+
+                    if (player.audioSessionId > 0) {
+                        audioEffectsManager.attachToAudioSession(player.audioSessionId)
+                    }
                 }
             }
 
             override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                 AuraLog.e(TAG, "PlaybackException: ${error.message} (code: ${error.errorCodeName})", error)
                 _uiState.value = _uiState.value.copy(isPlaying = false)
+                stopPositionTicker()
             }
         })
 
@@ -251,21 +296,36 @@ class AuraPlayerController private constructor(private val context: Context) {
     fun togglePlayPause() {
         val player = getOrCreatePlayer()
         if (player.isPlaying) {
-            player.pause()
+            pause()
         } else {
-            player.volume = 1.0f
-            player.play()
+            resume()
         }
     }
 
     fun pause() {
-        getOrCreatePlayer().pause()
+        val player = getOrCreatePlayer()
+        player.pause()
+        _uiState.value = _uiState.value.copy(isPlaying = false)
+        stopPositionTicker()
+        com.example.widget.AuraMediaWidget.updateAllWidgets(context)
     }
 
     fun resume() {
         val player = getOrCreatePlayer()
+        if (player.playbackState == Player.STATE_ENDED) {
+            player.seekTo(0, 0L)
+        }
+        if (player.playbackState == Player.STATE_IDLE) {
+            player.prepare()
+        }
         player.volume = 1.0f
         player.play()
+        _uiState.value = _uiState.value.copy(isPlaying = true)
+        startPositionTicker()
+        if (player.audioSessionId > 0) {
+            audioEffectsManager.attachToAudioSession(player.audioSessionId)
+        }
+        com.example.widget.AuraMediaWidget.updateAllWidgets(context)
     }
 
     fun seekTo(positionMs: Long) {
@@ -346,16 +406,14 @@ class AuraPlayerController private constructor(private val context: Context) {
                         val pos = p.currentPosition
                         val dur = p.duration.coerceAtLeast(0L)
                         val buf = p.bufferedPosition
-                        if (kotlin.math.abs(_uiState.value.currentPositionMs - pos) >= 200L) {
-                            _uiState.value = _uiState.value.copy(
-                                currentPositionMs = pos,
-                                durationMs = dur,
-                                bufferedPositionMs = buf
-                            )
-                        }
+                        _uiState.value = _uiState.value.copy(
+                            currentPositionMs = pos,
+                            durationMs = if (dur > 0) dur else _uiState.value.durationMs,
+                            bufferedPositionMs = buf
+                        )
                     }
                 }
-                delay(300L) // Smooth updates on Main thread without thread jumping
+                delay(100L) // 10 fps fluid position updates
             }
         }
     }

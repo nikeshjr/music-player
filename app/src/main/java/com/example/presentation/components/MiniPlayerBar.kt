@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -83,10 +84,18 @@ fun MiniPlayerBar(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Mini Spinning Vinyl
+                // Mini Spinning Vinyl with Real Album Artwork
                 SpinningVinylRecord(
                     isPlaying = uiState.isPlaying,
-                    modifier = Modifier.size(38.dp)
+                    modifier = Modifier.size(42.dp),
+                    albumArtContent = {
+                        AuraArtworkImage(
+                            song = currentSong,
+                            shape = CircleShape,
+                            modifier = Modifier.fillMaxSize(),
+                            fallbackIconSize = 10.dp
+                        )
+                    }
                 )
 
                 Spacer(modifier = Modifier.width(12.dp))
@@ -101,7 +110,7 @@ fun MiniPlayerBar(
                             maxLines = 1,
                             modifier = Modifier.weight(1f, fill = false)
                         )
-                        if (currentSong.isHiRes) {
+                        if (currentSong.isHiResTrack) {
                             Spacer(modifier = Modifier.width(6.dp))
                             Box(
                                 modifier = Modifier
@@ -109,7 +118,7 @@ fun MiniPlayerBar(
                                     .background(Color(0xFFD4AF37))
                                     .padding(horizontal = 4.dp, vertical = 1.dp)
                             ) {
-                                Text("HI-RES", fontSize = 8.sp, fontWeight = FontWeight.ExtraBold, color = Color.Black)
+                                Text(currentSong.audioBadgeLabel, fontSize = 8.sp, fontWeight = FontWeight.ExtraBold, color = Color.Black)
                             }
                         }
                     }

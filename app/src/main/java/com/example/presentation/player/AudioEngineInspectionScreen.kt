@@ -46,6 +46,7 @@ import com.example.core.motion.SpinningVinylRecord
 import com.example.core.motion.WaveformSeekBar
 import com.example.core.theme.AuraTheme
 import com.example.domain.model.RepeatMode
+import com.example.presentation.components.AuraArtworkImage
 import com.example.presentation.components.GlassButton
 import com.example.presentation.components.GlassChip
 import com.example.presentation.components.GlassSlider
@@ -114,7 +115,15 @@ fun AudioEngineInspectionScreen(
                     ) {
                         SpinningVinylRecord(
                             isPlaying = uiState.isPlaying,
-                            modifier = Modifier.size(64.dp)
+                            modifier = Modifier.size(64.dp),
+                            albumArtContent = {
+                                AuraArtworkImage(
+                                    song = currentTrack,
+                                    shape = CircleShape,
+                                    modifier = Modifier.size(28.dp),
+                                    fallbackIconSize = 14.dp
+                                )
+                            }
                         )
                         Spacer(modifier = Modifier.width(14.dp))
                         Column(modifier = Modifier.weight(1f)) {
@@ -137,7 +146,7 @@ fun AudioEngineInspectionScreen(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(6.dp))
                                     .background(
-                                        if (currentTrack.isHiRes) Color(0xFFD4AF37) else theme.primaryColor.copy(alpha = 0.3f)
+                                        if (currentTrack.isHiResTrack) Color(0xFFD4AF37) else theme.primaryColor.copy(alpha = 0.3f)
                                     )
                                     .padding(horizontal = 6.dp, vertical = 2.dp)
                             ) {
@@ -145,7 +154,7 @@ fun AudioEngineInspectionScreen(
                                     text = currentTrack.audioBadgeLabel,
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.ExtraBold,
-                                    color = if (currentTrack.isHiRes) Color.Black else Color.White
+                                    color = if (currentTrack.isHiResTrack) Color.Black else Color.White
                                 )
                             }
                         }

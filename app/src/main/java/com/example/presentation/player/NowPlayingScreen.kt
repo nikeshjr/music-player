@@ -117,11 +117,25 @@ fun NowPlayingScreen(
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
-                    colors = listOf(
-                        theme.primaryColor.copy(alpha = 0.35f),
-                        theme.backgroundColor,
-                        Color(0xFF030408)
-                    )
+                    colors = if (theme.isLight) {
+                        listOf(
+                            theme.primaryColor.copy(alpha = 0.15f),
+                            theme.backgroundColor,
+                            Color(0xFFE2E8F0)
+                        )
+                    } else if (theme.isAmoled) {
+                        listOf(
+                            theme.primaryColor.copy(alpha = 0.25f),
+                            Color.Black,
+                            Color.Black
+                        )
+                    } else {
+                        listOf(
+                            theme.primaryColor.copy(alpha = 0.35f),
+                            theme.backgroundColor,
+                            Color(0xFF030408)
+                        )
+                    }
                 )
             )
             .statusBarsPadding()
@@ -325,7 +339,7 @@ fun NowPlayingScreen(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(6.dp))
                                 .background(
-                                    if (currentSong.isHiRes) Color(0xFFD4AF37) else theme.primaryColor.copy(alpha = 0.3f)
+                                    if (currentSong.isHiResTrack) Color(0xFFD4AF37) else theme.primaryColor.copy(alpha = 0.3f)
                                 )
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
@@ -333,7 +347,7 @@ fun NowPlayingScreen(
                                 text = currentSong.audioBadgeLabel,
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.ExtraBold,
-                                color = if (currentSong.isHiRes) Color.Black else Color.White
+                                color = if (currentSong.isHiResTrack) Color.Black else Color.White
                             )
                         }
                     }

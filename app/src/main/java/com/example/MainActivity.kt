@@ -196,11 +196,25 @@ fun AuraAppShell(
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
-                    colors = listOf(
-                        theme.backgroundColor,
-                        Color(0xFF070810),
-                        Color(0xFF030408)
-                    )
+                    colors = if (theme.isLight) {
+                        listOf(
+                            theme.backgroundColor,
+                            Color(0xFFEFF2F8),
+                            Color(0xFFE2E8F0)
+                        )
+                    } else if (theme.isAmoled) {
+                        listOf(
+                            Color.Black,
+                            Color.Black,
+                            Color.Black
+                        )
+                    } else {
+                        listOf(
+                            theme.backgroundColor,
+                            Color(0xFF070810),
+                            Color(0xFF030408)
+                        )
+                    }
                 )
             )
     ) {

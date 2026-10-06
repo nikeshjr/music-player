@@ -46,7 +46,7 @@ data class Song(
     val bitDepth: Int = 16,     // in bits e.g. 16, 24, 32
     val bitrate: Int = 320,      // in kbps
     val channels: Int = 2,      // 1 = Mono, 2 = Stereo, >2 = Multichannel
-    val isHiRes: Boolean = false, // 24-bit or sampleRate >= 88200Hz
+    val isHiRes: Boolean = false, // True for FLAC, 24-bit, or sampleRate >= 48000Hz
     // ReplayGain tags
     val replayGainTrack: Float? = null,
     val replayGainAlbum: Float? = null,
@@ -70,11 +70,14 @@ data class Song(
             return "%d:%02d".format(minutes, seconds)
         }
 
+    val isHiResTrack: Boolean
+        get() = isHiRes || codec.equals("FLAC", ignoreCase = true) || bitDepth >= 24 || sampleRate >= 48000
+
     val audioBadgeLabel: String
         get() = when {
-            codec.equals("FLAC", ignoreCase = true) && isHiRes -> "HI-RES FLAC"
-            codec.equals("FLAC", ignoreCase = true) -> "FLAC"
-            isHiRes -> "HI-RES"
+            codec.equals("FLAC", ignoreCase = true) && (bitDepth >= 24 || sampleRate >= 88200) -> "HI-RES FLAC"
+            codec.equals("FLAC", ignoreCase = true) -> "HI-RES"
+            isHiRes || bitDepth >= 24 || sampleRate >= 48000 -> "HI-RES"
             else -> codec.uppercase()
         }
 

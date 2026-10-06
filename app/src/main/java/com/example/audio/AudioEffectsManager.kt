@@ -47,41 +47,78 @@ class AudioEffectsManager(private val context: Context) {
         val replayGainPreampDb: Float = 0f
     )
 
-    private val _effectsState = MutableStateFlow(AudioEffectsState())
+    private val defaultBands = listOf(
+        BandInfo(0, 60, -1500, 1500, 0),
+        BandInfo(1, 230, -1500, 1500, 0),
+        BandInfo(2, 910, -1500, 1500, 0),
+        BandInfo(3, 3600, -1500, 1500, 0),
+        BandInfo(4, 14000, -1500, 1500, 0)
+    )
+
+    private val _effectsState = MutableStateFlow(AudioEffectsState(bands = defaultBands))
     val effectsState: StateFlow<AudioEffectsState> = _effectsState.asStateFlow()
 
     /**
      * Attaches audio effects to the active ExoPlayer audioSessionId.
      */
     fun attachToAudioSession(audioSessionId: Int) {
-        if (audioSessionId <= 0 || audioSessionId == currentSessionId) return
+        if (audioSessionId <= 0) return
+        if (audioSessionId == currentSessionId && equalizer != null && bassBoost != null && virtualizer != null) {
+            return // Already active and attached to this session
+        }
 
-        AuraLog.i(TAG, "Attaching audio effects to new audioSessionId: $audioSessionId")
+        AuraLog.i(TAG, "Attaching audio effects to audioSessionId: $audioSessionId (previous: $currentSessionId)")
         release()
         currentSessionId = audioSessionId
 
         try {
-            // 1. Equalizer setup
-            equalizer = Equalizer(0, audioSessionId).apply {
+            // 1. Equalizer setup (priority 1000 to override system defaults)
+            val eq = Equalizer(1000, audioSessionId).apply {
                 enabled = _effectsState.value.isEnabled
             }
-            populateBandInfo()
+            equalizer = eq
+
+            val numBands = eq.numberOfBands
+            val range = eq.bandLevelRange
+            val hwBands = mutableListOf<BandInfo>()
+            for (i in 0 until numBands) {
+                val band = i.toShort()
+                val freq = eq.getCenterFreq(band) / 1000
+                val existingLevel = _effectsState.value.bands.getOrNull(i)?.currentLevelMb ?: 0.toShort()
+                try {
+                    eq.setBandLevel(band, existingLevel)
+                } catch (_: Exception) {}
+                hwBands.add(
+                    BandInfo(
+                        bandNumber = band,
+                        centerFreqHz = freq,
+                        minLevelMb = range[0],
+                        maxLevelMb = range[1],
+                        currentLevelMb = existingLevel
+                    )
+                )
+            }
+            if (hwBands.isNotEmpty()) {
+                _effectsState.value = _effectsState.value.copy(bands = hwBands)
+            }
 
             // 2. BassBoost setup
-            bassBoost = BassBoost(0, audioSessionId).apply {
+            val bb = BassBoost(1000, audioSessionId).apply {
                 enabled = _effectsState.value.isEnabled
                 if (strengthSupported) {
                     setStrength(_effectsState.value.bassBoostStrength.toShort())
                 }
             }
+            bassBoost = bb
 
             // 3. Virtualizer setup
-            virtualizer = Virtualizer(0, audioSessionId).apply {
+            val virt = Virtualizer(1000, audioSessionId).apply {
                 enabled = _effectsState.value.isEnabled
                 if (strengthSupported) {
                     setStrength(_effectsState.value.virtualizerStrength.toShort())
                 }
             }
+            virtualizer = virt
 
             // 4. LoudnessEnhancer (API 19+)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
@@ -90,10 +127,9 @@ class AudioEffectsManager(private val context: Context) {
                 }
             }
 
-            AuraLog.i(TAG, "Audio effects attached successfully.")
+            AuraLog.i(TAG, "Audio effects attached successfully to session $audioSessionId.")
         } catch (e: Exception) {
             AuraLog.e(TAG, "Error initializing hardware audio effects: ${e.message}", e)
-            release()
         }
     }
 
@@ -126,34 +162,45 @@ class AudioEffectsManager(private val context: Context) {
 
     fun setBandLevel(bandNumber: Short, levelMb: Short) {
         try {
+            equalizer?.enabled = _effectsState.value.isEnabled
             equalizer?.setBandLevel(bandNumber, levelMb)
-            val updatedBands = _effectsState.value.bands.map {
-                if (it.bandNumber == bandNumber) it.copy(currentLevelMb = levelMb) else it
-            }
-            _effectsState.value = _effectsState.value.copy(bands = updatedBands)
         } catch (e: Exception) {
             AuraLog.w(TAG, "Failed to set EQ band level: ${e.message}")
         }
+        val updatedBands = if (_effectsState.value.bands.isEmpty()) {
+            listOf(BandInfo(bandNumber, 1000, -1500, 1500, levelMb))
+        } else {
+            _effectsState.value.bands.map {
+                if (it.bandNumber == bandNumber) it.copy(currentLevelMb = levelMb) else it
+            }
+        }
+        _effectsState.value = _effectsState.value.copy(bands = updatedBands)
     }
 
     fun setBassBoost(strength: Int) {
         val clamped = strength.coerceIn(0, 1000)
         try {
-            bassBoost?.setStrength(clamped.toShort())
-            _effectsState.value = _effectsState.value.copy(bassBoostStrength = clamped)
+            bassBoost?.enabled = _effectsState.value.isEnabled
+            if (bassBoost?.strengthSupported == true) {
+                bassBoost?.setStrength(clamped.toShort())
+            }
         } catch (e: Exception) {
             AuraLog.w(TAG, "Failed setting bass boost: ${e.message}")
         }
+        _effectsState.value = _effectsState.value.copy(bassBoostStrength = clamped)
     }
 
     fun setVirtualizer(strength: Int) {
         val clamped = strength.coerceIn(0, 1000)
         try {
-            virtualizer?.setStrength(clamped.toShort())
-            _effectsState.value = _effectsState.value.copy(virtualizerStrength = clamped)
+            virtualizer?.enabled = _effectsState.value.isEnabled
+            if (virtualizer?.strengthSupported == true) {
+                virtualizer?.setStrength(clamped.toShort())
+            }
         } catch (e: Exception) {
             AuraLog.w(TAG, "Failed setting virtualizer: ${e.message}")
         }
+        _effectsState.value = _effectsState.value.copy(virtualizerStrength = clamped)
     }
 
     fun setEnabled(enabled: Boolean) {
@@ -162,10 +209,10 @@ class AudioEffectsManager(private val context: Context) {
             bassBoost?.enabled = enabled
             virtualizer?.enabled = enabled
             loudnessEnhancer?.enabled = enabled
-            _effectsState.value = _effectsState.value.copy(isEnabled = enabled)
         } catch (e: Exception) {
             AuraLog.w(TAG, "Failed toggling audio effects: ${e.message}")
         }
+        _effectsState.value = _effectsState.value.copy(isEnabled = enabled)
     }
 
     /**

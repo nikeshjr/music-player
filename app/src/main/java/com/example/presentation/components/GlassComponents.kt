@@ -113,34 +113,47 @@ fun Modifier.liquidGlassmorphic(
  * Modifier.glassmorphic: Core glassmorphism modifier that applies specular linear gradient borders,
  * frosted background tinting, inner highlight, and elevation shadow.
  */
+@Composable
 fun Modifier.glassmorphic(
     shape: Shape = RoundedCornerShape(20.dp),
-    tint: Color = Color(0xFF141828),
-    tintAlpha: Float = 0.22f,
-    borderBrightness: Float = 0.25f,
+    tint: Color = AuraTheme.current.surfaceColor,
+    tintAlpha: Float = AuraTheme.current.glassTintOpacity,
+    borderBrightness: Float = AuraTheme.current.glassBorderBrightness,
     elevation: Dp = 8.dp
-): Modifier = this
-    .shadow(
-        elevation = elevation,
-        shape = shape,
-        ambientColor = Color.Black.copy(alpha = 0.35f),
-        spotColor = Color.Black.copy(alpha = 0.5f)
-    )
-    .clip(shape)
-    .background(tint.copy(alpha = tintAlpha))
-    .border(
-        border = BorderStroke(
-            width = 1.dp,
-            brush = Brush.linearGradient(
-                colors = listOf(
-                    Color.White.copy(alpha = borderBrightness),
-                    Color.White.copy(alpha = borderBrightness * 0.15f),
-                    Color.Transparent
-                )
+): Modifier {
+    val isLight = AuraTheme.current.isLight
+    val borderBrush = if (isLight) {
+        Brush.linearGradient(
+            colors = listOf(
+                Color.Black.copy(alpha = 0.09f),
+                Color.Black.copy(alpha = 0.03f),
+                Color.Transparent
             )
-        ),
-        shape = shape
-    )
+        )
+    } else {
+        Brush.linearGradient(
+            colors = listOf(
+                Color.White.copy(alpha = borderBrightness),
+                Color.White.copy(alpha = borderBrightness * 0.15f),
+                Color.Transparent
+            )
+        )
+    }
+
+    return this
+        .shadow(
+            elevation = elevation,
+            shape = shape,
+            ambientColor = if (isLight) Color.Black.copy(alpha = 0.06f) else Color.Black.copy(alpha = 0.35f),
+            spotColor = if (isLight) Color.Black.copy(alpha = 0.10f) else Color.Black.copy(alpha = 0.5f)
+        )
+        .clip(shape)
+        .background(tint.copy(alpha = tintAlpha))
+        .border(
+            border = BorderStroke(width = 1.dp, brush = borderBrush),
+            shape = shape
+        )
+}
 
 /**
  * BackdropGlassLayer: Renders an actual blurred backdrop layer on API 31+ using RenderEffect.
@@ -263,9 +276,10 @@ fun GlassChip(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val tint = if (isSelected) AuraTheme.current.primaryColor else AuraTheme.current.surfaceColor
-    val textCol = if (isSelected) Color.White else AuraTheme.current.textColorSecondary
-    val alpha = if (isSelected) 0.35f else 0.15f
+    val theme = AuraTheme.current
+    val tint = if (isSelected) theme.primaryColor else theme.surfaceColor
+    val textCol = if (isSelected) Color.White else theme.textColorPrimary
+    val alpha = if (isSelected) 0.90f else (if (theme.isLight) 0.85f else 0.25f)
 
     Box(
         modifier = modifier
@@ -322,9 +336,14 @@ fun GlassSwitch(
     modifier: Modifier = Modifier
 ) {
     val theme = AuraTheme.current
+    val density = LocalDensity.current
+    // Total width is 52.dp, padding is 2.dp on both sides, inner width is 48.dp.
+    // Thumb is 24.dp. Travel distance = 48.dp - 24.dp = 24.dp.
+    val travelDistancePx = with(density) { 24.dp.toPx() }
+
     val thumbOffset by animateFloatAsState(
-        targetValue = if (checked) 24f else 0f,
-        animationSpec = AuraMotion.GentleSpring,
+        targetValue = if (checked) travelDistancePx else 0f,
+        animationSpec = AuraMotion.SnappySpring,
         label = "GlassSwitchThumbOffset"
     )
 
@@ -335,7 +354,7 @@ fun GlassSwitch(
             .glassmorphic(
                 shape = CircleShape,
                 tint = if (checked) theme.primaryColor else theme.surfaceColor,
-                tintAlpha = if (checked) 0.5f else 0.25f,
+                tintAlpha = if (checked) 0.90f else (if (theme.isLight) 0.85f else 0.35f),
                 borderBrightness = if (checked) 0.5f else 0.2f,
                 elevation = 2.dp
             )
@@ -348,7 +367,11 @@ fun GlassSwitch(
                 .graphicsLayer { translationX = thumbOffset }
                 .size(24.dp)
                 .clip(CircleShape)
-                .background(if (checked) Color.White else theme.textColorSecondary)
+                .background(
+                    if (checked) Color.White
+                    else if (theme.isLight) Color(0xFF64748B)
+                    else theme.textColorSecondary
+                )
         )
     }
 }

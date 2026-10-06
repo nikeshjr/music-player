@@ -102,20 +102,58 @@ class AuraPreferences(private val context: Context) {
             val accentSourceName = prefs[KEY_ACCENT_SOURCE] ?: AccentSource.ARTWORK_DYNAMIC.name
             val accentSource = runCatching { AccentSource.valueOf(accentSourceName) }.getOrDefault(AccentSource.ARTWORK_DYNAMIC)
 
+            val isLight = themeMode == ThemeMode.LIGHT
+            val isAmoled = themeMode == ThemeMode.AMOLED_BLACK
+
             val primaryVal = prefs[KEY_PRIMARY_COLOR]
             val primaryColor = if (primaryVal != null) Color(primaryVal.toULong()) else preset.primary
 
             val secondaryVal = prefs[KEY_SECONDARY_COLOR]
             val secondaryColor = if (secondaryVal != null) Color(secondaryVal.toULong()) else preset.secondary
 
-            val backgroundVal = prefs[KEY_BACKGROUND_COLOR]
-            val backgroundColor = if (backgroundVal != null) Color(backgroundVal.toULong()) else preset.background
+            val backgroundColor = when {
+                isLight -> Color(0xFFF6F8FC)
+                isAmoled -> Color(0xFF000000)
+                else -> {
+                    val bgVal = prefs[KEY_BACKGROUND_COLOR]
+                    if (bgVal != null) Color(bgVal.toULong()) else preset.background
+                }
+            }
+
+            val surfaceColor = when {
+                isLight -> Color(0xFFFFFFFF)
+                isAmoled -> Color(0xFF07090F)
+                else -> Color(0xFF141828)
+            }
+
+            val surfaceTintColor = when {
+                isLight -> Color(0xFFE2E8F0)
+                isAmoled -> Color(0xFF0E121E)
+                else -> Color(0xFF1D233A)
+            }
+
+            val textColorPrimary = when {
+                isLight -> Color(0xFF0F172A)
+                else -> Color(0xFFF0F4FC)
+            }
+
+            val textColorSecondary = when {
+                isLight -> Color(0xFF64748B)
+                else -> Color(0xFF94A3B8)
+            }
+
+            val islandColor = when {
+                isLight -> Color(0xFF1E293B)
+                isAmoled -> Color(0xFF000000)
+                else -> Color(0xFF0F1322)
+            }
 
             val glowVal = prefs[KEY_GLOW_COLOR]
             val glowColor = if (glowVal != null) Color(glowVal.toULong()) else preset.glow
 
             val blurRadius = (prefs[KEY_BLUR_RADIUS] ?: 24f).dp
-            val tintOpacity = prefs[KEY_TINT_OPACITY] ?: 0.22f
+            val tintOpacity = if (isLight) 0.70f else (prefs[KEY_TINT_OPACITY] ?: 0.22f)
+            val borderBrightness = if (isLight) 0.40f else 0.25f
             val cornerRadius = (prefs[KEY_GLOBAL_CORNER_RADIUS] ?: 20f).dp
 
             val npStyleName = prefs[KEY_NOW_PLAYING_STYLE] ?: NowPlayingStyle.CLASSIC.name
@@ -138,9 +176,15 @@ class AuraPreferences(private val context: Context) {
                 primaryColor = primaryColor,
                 secondaryColor = secondaryColor,
                 backgroundColor = backgroundColor,
+                surfaceColor = surfaceColor,
+                surfaceTintColor = surfaceTintColor,
+                textColorPrimary = textColorPrimary,
+                textColorSecondary = textColorSecondary,
+                islandColor = islandColor,
                 glowColor = glowColor,
                 glassBlurRadius = blurRadius,
                 glassTintOpacity = tintOpacity,
+                glassBorderBrightness = borderBrightness,
                 globalCornerRadius = cornerRadius,
                 nowPlayingStyle = npStyle,
                 miniPlayerStyle = mpStyle,

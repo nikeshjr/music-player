@@ -53,7 +53,7 @@ class AuraMediaWidget : AppWidgetProvider() {
             views.setTextViewText(R.id.widget_song_artist, currentSong?.artist ?: "Tap to play music")
             views.setTextViewText(
                 R.id.widget_format_badge,
-                if (currentSong?.isHiRes == true) "HI-RES FLAC" else currentSong?.codec ?: "OFFLINE"
+                if (currentSong?.isHiResTrack == true) "HI-RES FLAC" else currentSong?.codec ?: "OFFLINE"
             )
 
             // Play/Pause icon

@@ -379,9 +379,9 @@ private fun LargeCardLayout(
                     color = Color.White.copy(alpha = 0.75f),
                     maxLines = 1
                 )
-                if (track?.isHiRes == true) {
+                if (track?.isHiResTrack == true) {
                     Text(
-                        text = "HI-RES FLAC • 24-bit / 96 kHz",
+                        text = track?.technicalSummary ?: "HI-RES FLAC",
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFFF5B041)

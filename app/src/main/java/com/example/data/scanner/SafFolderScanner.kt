@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
 import com.example.core.logger.AuraLog
 import com.example.data.metadata.CueSheetParser
+import com.example.data.metadata.FlacVorbisCommentParser
 import com.example.data.metadata.LrcLyricsParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -117,7 +118,29 @@ class SafFolderScanner(private val context: Context) {
                         AuraLog.w(TAG, "Error retrieving metadata for ${file.uri}: ${e.message}")
                     }
 
-                    val isHiRes = ext == "flac"
+                    var sampleRate = 44100
+                    var bitDepth = 16
+                    var isHiRes = ext == "flac"
+                    var embeddedLyrics: String? = null
+
+                    if (ext == "flac") {
+                        try {
+                            context.contentResolver.openInputStream(file.uri)?.use { stream ->
+                                val flacMeta = FlacVorbisCommentParser.parse(stream, file.length())
+                                if (flacMeta != null) {
+                                    sampleRate = flacMeta.sampleRate
+                                    bitDepth = flacMeta.bitDepth
+                                    isHiRes = true
+                                    embeddedLyrics = flacMeta.embeddedLyrics
+                                    flacMeta.comments["TITLE"]?.let { if (it.isNotBlank()) title = it }
+                                    flacMeta.comments["ARTIST"]?.let { if (it.isNotBlank()) artist = it }
+                                    flacMeta.comments["ALBUM"]?.let { if (it.isNotBlank()) album = it }
+                                    if (flacMeta.durationMs > 0) durationMs = flacMeta.durationMs
+                                }
+                            }
+                        } catch (_: Exception) {}
+                    }
+
                     val currentTime = System.currentTimeMillis() / 1000L
                     val song = com.example.data.model.Song(
                         mediaStoreId = 0L,
@@ -128,10 +151,13 @@ class SafFolderScanner(private val context: Context) {
                         path = file.uri.toString(),
                         mimeType = "audio/$ext",
                         codec = ext.uppercase(),
+                        sampleRate = sampleRate,
+                        bitDepth = bitDepth,
                         isHiRes = isHiRes,
                         sizeBytes = file.length(),
                         dateAdded = currentTime,
-                        dateModified = currentTime
+                        dateModified = currentTime,
+                        embeddedLyrics = embeddedLyrics
                     )
                     audioList.add(song)
                 }

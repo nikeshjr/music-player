@@ -1,5 +1,8 @@
 package com.example.core.theme
 
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
@@ -53,7 +56,10 @@ data class AuraThemeState(
     val islandCornerRadius: Dp = 28.dp,
     val islandOpacity: Float = 0.95f,
     val islandVinylArt: Boolean = true
-)
+) {
+    val isLight: Boolean get() = themeMode == ThemeMode.LIGHT
+    val isAmoled: Boolean get() = themeMode == ThemeMode.AMOLED_BLACK
+}
 
 enum class ThemeMode {
     DARK, LIGHT, AMOLED_BLACK, SYSTEM, ARTWORK_DYNAMIC, MATERIAL_YOU
@@ -132,7 +138,34 @@ fun AuraThemeProvider(
     themeState: AuraThemeState,
     content: @Composable () -> Unit
 ) {
+    val isLight = themeState.isLight
+    val m3ColorScheme = if (isLight) {
+        lightColorScheme(
+            primary = themeState.primaryColor,
+            secondary = themeState.secondaryColor,
+            background = themeState.backgroundColor,
+            surface = themeState.surfaceColor,
+            onPrimary = Color.White,
+            onSecondary = Color.White,
+            onBackground = themeState.textColorPrimary,
+            onSurface = themeState.textColorPrimary
+        )
+    } else {
+        darkColorScheme(
+            primary = themeState.primaryColor,
+            secondary = themeState.secondaryColor,
+            background = themeState.backgroundColor,
+            surface = themeState.surfaceColor,
+            onPrimary = Color.White,
+            onSecondary = Color.White,
+            onBackground = themeState.textColorPrimary,
+            onSurface = themeState.textColorPrimary
+        )
+    }
+
     CompositionLocalProvider(LocalAuraTheme provides themeState) {
-        content()
+        MaterialTheme(colorScheme = m3ColorScheme) {
+            content()
+        }
     }
 }

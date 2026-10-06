@@ -1,5 +1,6 @@
 package com.example.data.scanner
 
+import android.content.ContentUris
 import android.content.Context
 import android.database.Cursor
 import android.media.MediaMetadataRetriever
@@ -172,8 +173,21 @@ class MediaStoreScanner(
                     var replayGainTrackPeak: Float? = null
 
                     // FIRST-CLASS FLAC PARSING
-                    if (codec == "FLAC" && file.exists()) {
-                        val flacMeta = FlacVorbisCommentParser.parse(file)
+                    if (codec == "FLAC") {
+                        isHiRes = true
+                        val flacMeta = try {
+                            if (file.exists() && file.canRead()) {
+                                FlacVorbisCommentParser.parse(file)
+                            } else {
+                                val trackUri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, mediaStoreId)
+                                context.contentResolver.openInputStream(trackUri)?.use { stream ->
+                                    FlacVorbisCommentParser.parse(stream, size)
+                                }
+                            }
+                        } catch (_: Exception) {
+                            null
+                        }
+
                         if (flacMeta != null) {
                             sampleRate = flacMeta.sampleRate
                             bitDepth = flacMeta.bitDepth

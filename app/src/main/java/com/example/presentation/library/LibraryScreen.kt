@@ -430,7 +430,7 @@ fun LibraryScreen(
             "Albums" -> {
                 val albums = remember(filteredSongs) {
                     filteredSongs.groupBy { it.album }.map { (album, tracks) ->
-                        AlbumSummary(album, tracks.first().artist, tracks.size, tracks.any { it.isHiRes }, tracks.first())
+                        AlbumSummary(album, tracks.first().artist, tracks.size, tracks.any { it.isHiResTrack }, tracks.first())
                     }
                 }
                 LazyVerticalGrid(
@@ -475,7 +475,7 @@ fun LibraryScreen(
                     item {
                         SmartPlaylistCard(
                             title = "Hi-Res Audiophile Collection",
-                            subtitle = "${filteredSongs.count { it.isHiRes }} 24-bit tracks",
+                            subtitle = "${filteredSongs.count { it.isHiResTrack }} Hi-Res / Lossless tracks",
                             icon = Icons.Default.Stars,
                             gradientColors = listOf(Color(0xFFD4AF37), Color(0xFFF5B041))
                         )
@@ -540,7 +540,7 @@ private fun SongListItem(
                         maxLines = 1,
                         modifier = Modifier.weight(1f, fill = false)
                     )
-                    if (song.isHiRes) {
+                    if (song.isHiResTrack) {
                         Spacer(modifier = Modifier.width(6.dp))
                         Box(
                             modifier = Modifier
@@ -548,7 +548,7 @@ private fun SongListItem(
                                 .background(Color(0xFFD4AF37))
                                 .padding(horizontal = 4.dp, vertical = 1.dp)
                         ) {
-                            Text("HI-RES", fontSize = 8.sp, fontWeight = FontWeight.ExtraBold, color = Color.Black)
+                            Text(song.audioBadgeLabel, fontSize = 8.sp, fontWeight = FontWeight.ExtraBold, color = Color.Black)
                         }
                     }
                 }

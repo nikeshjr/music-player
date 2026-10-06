@@ -374,14 +374,14 @@ fun TrackInspectionCard(song: Song) {
                     .size(46.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .background(
-                        if (song.isHiRes) Color(0xFFE5A93C).copy(alpha = 0.2f) else theme.primaryColor.copy(alpha = 0.2f)
+                        if (song.isHiResTrack) Color(0xFFE5A93C).copy(alpha = 0.2f) else theme.primaryColor.copy(alpha = 0.2f)
                     ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.Audiotrack,
                     contentDescription = null,
-                    tint = if (song.isHiRes) Color(0xFFF5B041) else theme.primaryColor,
+                    tint = if (song.isHiResTrack) Color(0xFFF5B041) else theme.primaryColor,
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -403,7 +403,7 @@ fun TrackInspectionCard(song: Song) {
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
                             .background(
-                                if (song.isHiRes) Color(0xFFD4AF37) else theme.primaryColor.copy(alpha = 0.3f)
+                                if (song.isHiResTrack) Color(0xFFD4AF37) else theme.primaryColor.copy(alpha = 0.3f)
                             )
                             .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
@@ -411,7 +411,7 @@ fun TrackInspectionCard(song: Song) {
                             text = song.audioBadgeLabel,
                             fontSize = 9.sp,
                             fontWeight = FontWeight.ExtraBold,
-                            color = if (song.isHiRes) Color.Black else Color.White
+                            color = if (song.isHiResTrack) Color.Black else Color.White
                         )
                     }
                 }

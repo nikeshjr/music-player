@@ -12,6 +12,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -43,6 +44,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.core.theme.AuraTheme
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
 /**
  * SpinningVinylRecord: Realistic vinyl record with spin-up and spin-down inertia physics.
@@ -58,23 +61,28 @@ fun SpinningVinylRecord(
 
     LaunchedEffect(isPlaying) {
         if (isPlaying) {
-            // Spin continuously at 33 RPM (~1.8 seconds per revolution)
-            while (true) {
+            while (isActive) {
                 rotationAnim.animateTo(
                     targetValue = rotationAnim.value + 360f,
-                    animationSpec = tween(durationMillis = 2000, easing = LinearEasing)
+                    animationSpec = tween(durationMillis = 3600, easing = LinearEasing)
                 )
             }
+        } else {
+            rotationAnim.stop()
         }
     }
 
-    Box(
+    BoxWithConstraints(
         modifier = modifier
             .graphicsLayer { rotationZ = rotationAnim.value % 360f }
             .clip(CircleShape)
             .background(Color(0xFF10121A)),
         contentAlignment = Alignment.Center
     ) {
+        val diameter = if (maxWidth < maxHeight) maxWidth else maxHeight
+        val centerLabelSize = diameter * 0.44f
+        val spindleHoleSize = (centerLabelSize * 0.22f).coerceAtLeast(4.dp)
+
         // Grooves and Vinyl Reflections
         Canvas(modifier = Modifier.fillMaxSize()) {
             val center = Offset(size.width / 2f, size.height / 2f)
@@ -107,10 +115,10 @@ fun SpinningVinylRecord(
             )
         }
 
-        // Center Album Art Label
+        // Center Album Art Label (proportional to vinyl diameter)
         Box(
             modifier = Modifier
-                .size(72.dp)
+                .size(centerLabelSize)
                 .clip(CircleShape)
                 .background(Color(0xFF1E2235)),
             contentAlignment = Alignment.Center
@@ -121,7 +129,7 @@ fun SpinningVinylRecord(
             // Center spindle hole
             Box(
                 modifier = Modifier
-                    .size(14.dp)
+                    .size(spindleHoleSize)
                     .clip(CircleShape)
                     .background(Color(0xFF0A0C16))
             )
@@ -131,6 +139,7 @@ fun SpinningVinylRecord(
 
 /**
  * AnimatedEqualizerBars: Sound wave visualization displayed on active track rows.
+ * Immediately animates dynamically when playing, and smoothly collapses to resting height when paused.
  */
 @Composable
 fun AnimatedEqualizerBars(
@@ -138,26 +147,37 @@ fun AnimatedEqualizerBars(
     modifier: Modifier = Modifier,
     barColor: Color = AuraTheme.current.primaryColor
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "EqBarsTransition")
+    val h1 = remember { Animatable(0.2f) }
+    val h2 = remember { Animatable(0.2f) }
+    val h3 = remember { Animatable(0.2f) }
 
-    val h1 by infiniteTransition.animateFloat(
-        initialValue = 0.2f,
-        targetValue = if (isPlaying) 1.0f else 0.2f,
-        animationSpec = infiniteRepeatable(tween(450, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "Bar1"
-    )
-    val h2 by infiniteTransition.animateFloat(
-        initialValue = 0.6f,
-        targetValue = if (isPlaying) 0.3f else 0.2f,
-        animationSpec = infiniteRepeatable(tween(380, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "Bar2"
-    )
-    val h3 by infiniteTransition.animateFloat(
-        initialValue = 0.3f,
-        targetValue = if (isPlaying) 0.9f else 0.2f,
-        animationSpec = infiniteRepeatable(tween(520, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "Bar3"
-    )
+    LaunchedEffect(isPlaying) {
+        if (isPlaying) {
+            launch {
+                while (isActive) {
+                    h1.animateTo(0.95f, tween(360, easing = FastOutSlowInEasing))
+                    h1.animateTo(0.25f, tween(340, easing = FastOutSlowInEasing))
+                }
+            }
+            launch {
+                while (isActive) {
+                    h2.animateTo(0.35f, tween(260, easing = FastOutSlowInEasing))
+                    h2.animateTo(1.0f, tween(320, easing = FastOutSlowInEasing))
+                    h2.animateTo(0.2f, tween(280, easing = FastOutSlowInEasing))
+                }
+            }
+            launch {
+                while (isActive) {
+                    h3.animateTo(0.85f, tween(420, easing = FastOutSlowInEasing))
+                    h3.animateTo(0.3f, tween(380, easing = FastOutSlowInEasing))
+                }
+            }
+        } else {
+            launch { h1.animateTo(0.2f, tween(180)) }
+            launch { h2.animateTo(0.2f, tween(180)) }
+            launch { h3.animateTo(0.2f, tween(180)) }
+        }
+    }
 
     Row(
         modifier = modifier.height(18.dp),
@@ -166,7 +186,7 @@ fun AnimatedEqualizerBars(
         Box(
             modifier = Modifier
                 .width(3.dp)
-                .height((18 * h1).dp)
+                .height((18 * h1.value).dp)
                 .clip(RoundedCornerShape(2.dp))
                 .background(barColor)
         )
@@ -174,7 +194,7 @@ fun AnimatedEqualizerBars(
         Box(
             modifier = Modifier
                 .width(3.dp)
-                .height((18 * h2).dp)
+                .height((18 * h2.value).dp)
                 .clip(RoundedCornerShape(2.dp))
                 .background(barColor)
         )
@@ -182,7 +202,7 @@ fun AnimatedEqualizerBars(
         Box(
             modifier = Modifier
                 .width(3.dp)
-                .height((18 * h3).dp)
+                .height((18 * h3.value).dp)
                 .clip(RoundedCornerShape(2.dp))
                 .background(barColor)
         )

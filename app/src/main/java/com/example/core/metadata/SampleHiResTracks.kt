@@ -70,7 +70,7 @@ object SampleHiResTracks {
             bitDepth = 16,
             bitrate = 920,
             channels = 2,
-            isHiRes = false,
+            isHiRes = true,
             replayGainTrack = -1.5f
         )
     )

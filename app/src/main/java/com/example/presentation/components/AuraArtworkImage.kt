@@ -34,9 +34,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.core.theme.AuraTheme
 import com.example.data.model.Song
+import com.example.data.metadata.FlacVorbisCommentParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.FileInputStream
 
 /**
  * Global fast LRU cache for decoded album art bitmaps (up to 32MB).
@@ -53,14 +55,36 @@ object AlbumArtCache {
 
     suspend fun loadArtwork(context: Context, song: Song?): Bitmap? = withContext(Dispatchers.IO) {
         if (song == null) return@withContext null
-        val cacheKey = if (song.mediaStoreId > 0) "ms_${song.mediaStoreId}" else "path_${song.path}"
+        val cacheKey = if (song.mediaStoreId > 0) "ms_${song.mediaStoreId}" else "path_${song.path}_${song.id}"
 
         memoryCache.get(cacheKey)?.let { return@withContext it }
 
         var decoded: Bitmap? = null
 
-        // 1. Try MediaStore Album Art URI
-        if (song.albumId > 0) {
+        // 1. Android Q+ official MediaStore Track Thumbnail
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q && song.mediaStoreId > 0) {
+            try {
+                val trackUri = ContentUris.withAppendedId(
+                    android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                    song.mediaStoreId
+                )
+                decoded = context.contentResolver.loadThumbnail(trackUri, android.util.Size(512, 512), null)
+            } catch (_: Exception) {}
+        }
+
+        // 2. Android Q+ official MediaStore Album Thumbnail
+        if (decoded == null && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q && song.albumId > 0) {
+            try {
+                val albumUri = ContentUris.withAppendedId(
+                    android.provider.MediaStore.Audio.Albums.EXTERNAL_CONTENT_URI,
+                    song.albumId
+                )
+                decoded = context.contentResolver.loadThumbnail(albumUri, android.util.Size(512, 512), null)
+            } catch (_: Exception) {}
+        }
+
+        // 3. Try MediaStore Album Art URI (older Android / legacy albumart table)
+        if (decoded == null && song.albumId > 0) {
             val artUri = ContentUris.withAppendedId(
                 Uri.parse("content://media/external/audio/albumart"),
                 song.albumId
@@ -69,20 +93,31 @@ object AlbumArtCache {
                 context.contentResolver.openInputStream(artUri)?.use { stream ->
                     decoded = BitmapFactory.decodeStream(stream)
                 }
-            } catch (ignored: Exception) {}
+            } catch (_: Exception) {}
         }
 
-        // 2. Try MediaMetadataRetriever embedded picture from file or ContentUri
+        // 4. Try MediaMetadataRetriever via Scoped Storage ContentUri / FileDescriptor
         if (decoded == null) {
             val retriever = MediaMetadataRetriever()
             try {
-                if (song.path.startsWith("content://")) {
+                if (song.mediaStoreId > 0) {
+                    val trackUri = ContentUris.withAppendedId(
+                        android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                        song.mediaStoreId
+                    )
+                    context.contentResolver.openFileDescriptor(trackUri, "r")?.use { pfd ->
+                        retriever.setDataSource(pfd.fileDescriptor)
+                        val pic = retriever.embeddedPicture
+                        if (pic != null) {
+                            decoded = BitmapFactory.decodeByteArray(pic, 0, pic.size)
+                        }
+                    }
+                } else if (song.path.startsWith("content://")) {
                     context.contentResolver.openFileDescriptor(Uri.parse(song.path), "r")?.use { pfd ->
                         retriever.setDataSource(pfd.fileDescriptor)
                         val pic = retriever.embeddedPicture
                         if (pic != null) {
-                            val options = BitmapFactory.Options().apply { inSampleSize = 1 }
-                            decoded = BitmapFactory.decodeByteArray(pic, 0, pic.size, options)
+                            decoded = BitmapFactory.decodeByteArray(pic, 0, pic.size)
                         }
                     }
                 } else if (song.path.isNotBlank()) {
@@ -91,15 +126,55 @@ object AlbumArtCache {
                         retriever.setDataSource(song.path)
                         val pic = retriever.embeddedPicture
                         if (pic != null) {
-                            val options = BitmapFactory.Options().apply { inSampleSize = 1 }
-                            decoded = BitmapFactory.decodeByteArray(pic, 0, pic.size, options)
+                            decoded = BitmapFactory.decodeByteArray(pic, 0, pic.size)
                         }
                     }
                 }
-            } catch (ignored: Exception) {
+            } catch (_: Exception) {
             } finally {
-                try { retriever.release() } catch (ignored: Exception) {}
+                try { retriever.release() } catch (_: Exception) {}
             }
+        }
+
+        // 5. Try FLAC embedded picture parser if FLAC format
+        if (decoded == null && (song.codec.equals("FLAC", ignoreCase = true) || song.path.endsWith(".flac", ignoreCase = true))) {
+            try {
+                val stream = if (song.mediaStoreId > 0) {
+                    val trackUri = ContentUris.withAppendedId(
+                        android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                        song.mediaStoreId
+                    )
+                    context.contentResolver.openInputStream(trackUri)
+                } else if (song.path.startsWith("content://")) {
+                    context.contentResolver.openInputStream(Uri.parse(song.path))
+                } else {
+                    val file = File(song.path)
+                    if (file.exists() && file.canRead()) FileInputStream(file) else null
+                }
+                stream?.use { inputStream ->
+                    val flacMeta = FlacVorbisCommentParser.parse(inputStream)
+                    flacMeta?.embeddedArtBytes?.let { bytes ->
+                        decoded = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                    }
+                }
+            } catch (_: Exception) {}
+        }
+
+        // 6. Sibling cover image file in the same folder (common in lossless collections)
+        if (decoded == null && song.path.startsWith("/")) {
+            try {
+                val parent = File(song.path).parentFile
+                if (parent != null && parent.exists() && parent.isDirectory) {
+                    val coverNames = listOf("cover.jpg", "folder.jpg", "front.jpg", "cover.png", "folder.png", "artwork.jpg")
+                    for (name in coverNames) {
+                        val artFile = File(parent, name)
+                        if (artFile.exists() && artFile.canRead()) {
+                            decoded = BitmapFactory.decodeFile(artFile.absolutePath)
+                            if (decoded != null) break
+                        }
+                    }
+                }
+            } catch (_: Exception) {}
         }
 
         if (decoded != null) {
@@ -122,33 +197,47 @@ fun AuraArtworkImage(
 ) {
     val context = LocalContext.current
     val theme = AuraTheme.current
-    var bitmap by remember(song?.id, song?.path) {
-        mutableStateOf<Bitmap?>(
-            if (song != null) {
-                val key = if (song.mediaStoreId > 0) "ms_${song.mediaStoreId}" else "path_${song.path}"
-                AlbumArtCache.memoryCache.get(key)
-            } else null
-        )
+    val trackKey = remember(song?.id, song?.mediaStoreId, song?.path) {
+        song?.let {
+            if (it.mediaStoreId > 0) "ms_${it.mediaStoreId}" else "path_${it.path}_${it.id}"
+        }
     }
 
-    LaunchedEffect(song?.id, song?.path) {
+    var bitmap by remember(trackKey) {
+        mutableStateOf(trackKey?.let { AlbumArtCache.memoryCache.get(it) })
+    }
+
+    LaunchedEffect(trackKey) {
         if (bitmap == null && song != null) {
-            bitmap = AlbumArtCache.loadArtwork(context, song)
+            val loaded = AlbumArtCache.loadArtwork(context, song)
+            if (loaded != null) {
+                bitmap = loaded
+            }
         }
+    }
+
+    val fallbackGradient = if (theme.isLight) {
+        Brush.linearGradient(
+            listOf(
+                theme.primaryColor.copy(alpha = 0.22f),
+                theme.secondaryColor.copy(alpha = 0.14f),
+                Color(0xFFE2E8F0)
+            )
+        )
+    } else {
+        Brush.linearGradient(
+            listOf(
+                theme.primaryColor.copy(alpha = 0.45f),
+                theme.secondaryColor.copy(alpha = 0.25f),
+                Color(0xFF141724)
+            )
+        )
     }
 
     Box(
         modifier = modifier
             .clip(shape)
-            .background(
-                Brush.linearGradient(
-                    listOf(
-                        theme.primaryColor.copy(alpha = 0.45f),
-                        theme.secondaryColor.copy(alpha = 0.25f),
-                        Color(0xFF141724)
-                    )
-                )
-            ),
+            .background(fallbackGradient),
         contentAlignment = Alignment.Center
     ) {
         if (bitmap != null) {
@@ -162,7 +251,7 @@ fun AuraArtworkImage(
             Icon(
                 imageVector = Icons.Default.Audiotrack,
                 contentDescription = null,
-                tint = Color.White.copy(alpha = 0.75f),
+                tint = if (theme.isLight) theme.primaryColor else Color.White.copy(alpha = 0.75f),
                 modifier = Modifier.size(fallbackIconSize)
             )
         }

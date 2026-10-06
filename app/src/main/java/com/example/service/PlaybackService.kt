@@ -39,21 +39,9 @@ class PlaybackService : MediaLibraryService() {
         super.onCreate()
         AuraLog.i(TAG, "Creating PlaybackService...")
 
-        val audioAttributes = AudioAttributes.Builder()
-            .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
-            .setUsage(C.USAGE_MEDIA)
-            .build()
-
-        val exoPlayer = ExoPlayer.Builder(this)
-            .setAudioAttributes(audioAttributes, true)
-            .setHandleAudioBecomingNoisy(true)
-            .setWakeMode(C.WAKE_MODE_LOCAL)
-            .build()
-
+        // Reuse the single canonical ExoPlayer from AuraPlayerController
+        val exoPlayer = AuraPlayerController.getInstance(this).getOrCreatePlayer()
         player = exoPlayer
-
-        // Attach to the central controller singleton
-        AuraPlayerController.getInstance(this).attachPlayer(exoPlayer)
 
         val sessionActivityIntent = PendingIntent.getActivity(
             this,
@@ -144,7 +132,6 @@ class PlaybackService : MediaLibraryService() {
     override fun onDestroy() {
         AuraLog.i(TAG, "Destroying PlaybackService...")
         mediaLibrarySession?.run {
-            player.release()
             release()
             mediaLibrarySession = null
         }
