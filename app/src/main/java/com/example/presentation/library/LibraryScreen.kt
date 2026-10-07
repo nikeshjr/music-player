@@ -69,6 +69,7 @@ import androidx.core.content.ContextCompat
 import com.example.core.di.AuraServiceLocator
 import com.example.core.logger.AuraLog
 import com.example.core.metadata.SampleHiResTracks
+import com.example.core.motion.FavoriteHeartBurst
 import com.example.core.theme.AuraTheme
 import com.example.data.model.Song
 import com.example.presentation.components.AuraArtworkImage
@@ -195,6 +196,7 @@ fun LibraryScreen(
 
     var selectedTab by remember { mutableStateOf("Songs") }
     var searchQuery by remember { mutableStateOf("") }
+    var showOnlyFavorites by remember { mutableStateOf(false) }
 
     val filteredSongs = remember(baseSongs, searchQuery) {
         if (searchQuery.isBlank()) baseSongs
@@ -412,18 +414,59 @@ fun LibraryScreen(
 
         when (selectedTab) {
             "Songs" -> {
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    items(filteredSongs, key = { it.id }) { song ->
-                        SongListItem(
-                            song = song,
-                            onClick = {
-                                controller.playSong(song, filteredSongs)
-                                onSongClick(song)
-                            }
+                val songsToDisplay = if (showOnlyFavorites) filteredSongs.filter { it.isFavorite } else filteredSongs
+                Column(modifier = Modifier.fillMaxSize()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        GlassChip(
+                            text = "All Songs (${filteredSongs.size})",
+                            isSelected = !showOnlyFavorites,
+                            onClick = { showOnlyFavorites = false }
                         )
+                        GlassChip(
+                            text = "Favorites (${baseSongs.count { it.isFavorite }})",
+                            isSelected = showOnlyFavorites,
+                            onClick = { showOnlyFavorites = true }
+                        )
+                    }
+
+                    if (songsToDisplay.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 40.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = if (showOnlyFavorites) "No favorite songs yet. Tap the heart icon on any song to add it!" else "No songs found.",
+                                color = theme.textColorSecondary,
+                                fontSize = 13.sp,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                        }
+                    } else {
+                        LazyColumn(
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            items(songsToDisplay, key = { it.id }) { song ->
+                                SongListItem(
+                                    song = song,
+                                    onClick = {
+                                        controller.playSong(song, songsToDisplay)
+                                        onSongClick(song)
+                                    },
+                                    onToggleFavorite = {
+                                        controller.toggleFavoriteForSong(song)
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -440,7 +483,16 @@ fun LibraryScreen(
                     modifier = Modifier.fillMaxSize()
                 ) {
                     items(albums, key = { it.title }) { album ->
-                        AlbumCard(album = album)
+                        AlbumCard(
+                            album = album,
+                            onClick = {
+                                val albumTracks = filteredSongs.filter { it.album == album.title }
+                                if (albumTracks.isNotEmpty()) {
+                                    controller.playSong(albumTracks.first(), albumTracks)
+                                    onSongClick(albumTracks.first())
+                                }
+                            }
+                        )
                     }
                 }
             }
@@ -455,7 +507,16 @@ fun LibraryScreen(
                     modifier = Modifier.fillMaxSize()
                 ) {
                     items(artists, key = { it.name }) { artist ->
-                        ArtistListItem(artist = artist)
+                        ArtistListItem(
+                            artist = artist,
+                            onClick = {
+                                val artistTracks = filteredSongs.filter { it.artist == artist.name }
+                                if (artistTracks.isNotEmpty()) {
+                                    controller.playSong(artistTracks.first(), artistTracks)
+                                    onSongClick(artistTracks.first())
+                                }
+                            }
+                        )
                     }
                 }
             }
@@ -469,7 +530,16 @@ fun LibraryScreen(
                             title = "Favorites",
                             subtitle = "${filteredSongs.count { it.isFavorite }} tracks",
                             icon = Icons.Default.Favorite,
-                            gradientColors = listOf(Color(0xFFFF3366), Color(0xFFFF6584))
+                            gradientColors = listOf(Color(0xFFFF3366), Color(0xFFFF6584)),
+                            onClick = {
+                                val favs = filteredSongs.filter { it.isFavorite }
+                                if (favs.isNotEmpty()) {
+                                    controller.playSong(favs.first(), favs)
+                                    onSongClick(favs.first())
+                                }
+                                showOnlyFavorites = true
+                                selectedTab = "Songs"
+                            }
                         )
                     }
                     item {
@@ -477,7 +547,14 @@ fun LibraryScreen(
                             title = "Hi-Res Audiophile Collection",
                             subtitle = "${filteredSongs.count { it.isHiResTrack }} Hi-Res / Lossless tracks",
                             icon = Icons.Default.Stars,
-                            gradientColors = listOf(Color(0xFFD4AF37), Color(0xFFF5B041))
+                            gradientColors = listOf(Color(0xFFD4AF37), Color(0xFFF5B041)),
+                            onClick = {
+                                val hiRes = filteredSongs.filter { it.isHiResTrack }
+                                if (hiRes.isNotEmpty()) {
+                                    controller.playSong(hiRes.first(), hiRes)
+                                    onSongClick(hiRes.first())
+                                }
+                            }
                         )
                     }
                     item {
@@ -485,7 +562,13 @@ fun LibraryScreen(
                             title = "Recently Added",
                             subtitle = "${filteredSongs.size} tracks",
                             icon = Icons.Default.PlaylistPlay,
-                            gradientColors = listOf(theme.primaryColor, theme.secondaryColor)
+                            gradientColors = listOf(theme.primaryColor, theme.secondaryColor),
+                            onClick = {
+                                if (filteredSongs.isNotEmpty()) {
+                                    controller.playSong(filteredSongs.first(), filteredSongs)
+                                    onSongClick(filteredSongs.first())
+                                }
+                            }
                         )
                     }
                 }
@@ -507,7 +590,8 @@ data class ArtistSummary(val name: String, val trackCount: Int)
 @Composable
 private fun SongListItem(
     song: Song,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onToggleFavorite: () -> Unit = {}
 ) {
     val theme = AuraTheme.current
     GlassCard(
@@ -567,15 +651,26 @@ private fun SongListItem(
                 fontSize = 11.sp,
                 color = theme.textColorSecondary
             )
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            FavoriteHeartBurst(
+                isFavorite = song.isFavorite,
+                onToggle = onToggleFavorite,
+                modifier = Modifier.size(24.dp)
+            )
         }
     }
 }
 
 @Composable
-private fun AlbumCard(album: AlbumSummary) {
+private fun AlbumCard(
+    album: AlbumSummary,
+    onClick: () -> Unit = {}
+) {
     val theme = AuraTheme.current
     GlassCard(
-        onClick = {},
+        onClick = onClick,
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(10.dp)) {
@@ -609,10 +704,13 @@ private fun AlbumCard(album: AlbumSummary) {
 }
 
 @Composable
-private fun ArtistListItem(artist: ArtistSummary) {
+private fun ArtistListItem(
+    artist: ArtistSummary,
+    onClick: () -> Unit = {}
+) {
     val theme = AuraTheme.current
     GlassCard(
-        onClick = {},
+        onClick = onClick,
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
@@ -653,11 +751,12 @@ private fun SmartPlaylistCard(
     title: String,
     subtitle: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
-    gradientColors: List<Color>
+    gradientColors: List<Color>,
+    onClick: () -> Unit = {}
 ) {
     val theme = AuraTheme.current
     GlassCard(
-        onClick = {},
+        onClick = onClick,
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(

@@ -74,6 +74,7 @@ fun LibraryInspectorScreen(
     val repository = remember { AuraServiceLocator.provideSongRepository(context) }
     val backupManager = remember { AuraServiceLocator.provideLibraryBackupManager(context) }
     val preferences = remember { AuraServiceLocator.providePreferences(context) }
+    val playerController = remember { com.example.service.AuraPlayerController.getInstance(context) }
     val theme = AuraTheme.current
 
     val songs by repository.getAllSongs().collectAsState(initial = emptyList())
@@ -351,16 +352,22 @@ fun LibraryInspectorScreen(
         val displaySongs = if (songs.isNotEmpty()) songs else SampleHiResTracks.tracks
 
         items(displaySongs) { song ->
-            TrackInspectionCard(song = song)
+            TrackInspectionCard(
+                song = song,
+                onClick = { playerController.playSong(song, displaySongs) }
+            )
         }
     }
 }
 
 @Composable
-fun TrackInspectionCard(song: Song) {
+fun TrackInspectionCard(
+    song: Song,
+    onClick: () -> Unit = {}
+) {
     val theme = AuraTheme.current
     GlassCard(
-        onClick = {},
+        onClick = onClick,
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(

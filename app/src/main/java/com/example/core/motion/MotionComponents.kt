@@ -10,7 +10,11 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.material3.ripple
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
@@ -234,7 +238,20 @@ fun WaveformSeekBar(
         modifier = modifier
             .fillMaxWidth()
             .height(36.dp)
-            .pointerInput(Unit) {
+            .pointerInput(onSeek) {
+                detectHorizontalDragGestures(
+                    onDragStart = { offset ->
+                        val newProgress = (offset.x / size.width).coerceIn(0f, 1f)
+                        onSeek(newProgress)
+                    },
+                    onHorizontalDrag = { change, _ ->
+                        change.consume()
+                        val newProgress = (change.position.x / size.width).coerceIn(0f, 1f)
+                        onSeek(newProgress)
+                    }
+                )
+            }
+            .pointerInput(onSeek) {
                 detectTapGestures { offset ->
                     val newProgress = (offset.x / size.width).coerceIn(0f, 1f)
                     onSeek(newProgress)
@@ -285,8 +302,12 @@ fun FavoriteHeartBurst(
     Box(
         modifier = modifier
             .scale(scale.value)
-            .pointerInput(Unit) {
-                detectTapGestures { onToggle() }
+            .clip(CircleShape)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = ripple(bounded = false, radius = 22.dp)
+            ) {
+                onToggle()
             },
         contentAlignment = Alignment.Center
     ) {

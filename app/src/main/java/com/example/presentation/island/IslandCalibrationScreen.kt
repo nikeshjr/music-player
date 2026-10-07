@@ -235,19 +235,20 @@ fun IslandCalibrationScreen(
                         .border(1.dp, Color.White.copy(alpha = 0.3f), CircleShape)
                 )
 
-                // The Island Preview with live morphing
-                val testState = uiState.copy(
-                    currentSong = uiState.currentSong ?: SampleHiResTracks.tracks.first(),
-                    isPlaying = true
-                )
-
+                // The Island Preview with live morphing and real playback state
                 Box(modifier = Modifier.padding(top = offsetY.dp)) {
                     DynamicIslandContent(
-                        uiState = testState,
+                        uiState = uiState,
                         layoutConfig = layoutConfig,
                         currentState = islandState,
                         onStateChange = { islandState = it },
-                        onPlayPause = { controller.togglePlayPause() },
+                        onPlayPause = {
+                            if (uiState.currentSong == null) {
+                                controller.playSong(SampleHiResTracks.tracks.first(), SampleHiResTracks.tracks)
+                            } else {
+                                controller.togglePlayPause()
+                            }
+                        },
                         onNext = { controller.next() },
                         onPrevious = { controller.previous() },
                         onSeek = { controller.seekToProgress(it) },

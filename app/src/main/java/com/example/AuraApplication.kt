@@ -4,6 +4,9 @@ import android.app.Application
 import android.util.Log
 import com.example.core.logger.AuraLog
 import com.example.data.local.db.AuraDatabase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 /**
  * AuraApplication: Application entry point for Aura Music.
@@ -20,9 +23,19 @@ class AuraApplication : Application() {
         AuraLog.initialize(this)
         AuraLog.i(TAG, "Aura Music application initializing...")
 
-        // Pre-initialize Room Database singleton
+        // Pre-initialize Room Database singleton and seed initial tracks
         try {
-            AuraDatabase.getInstance(this)
+            val db = AuraDatabase.getInstance(this)
+            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                try {
+                    if (db.songDao().getSongCount() == 0) {
+                        db.songDao().insertSongs(com.example.core.metadata.SampleHiResTracks.tracks)
+                        AuraLog.i(TAG, "Seeded initial tracks into Room database")
+                    }
+                } catch (e: Throwable) {
+                    AuraLog.e(TAG, "Error checking/seeding tracks: ${e.message}", e)
+                }
+            }
         } catch (e: Throwable) {
             AuraLog.e(TAG, "Room pre-init warning: ${e.message}", e)
         }

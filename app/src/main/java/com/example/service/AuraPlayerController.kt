@@ -306,10 +306,44 @@ class AuraPlayerController private constructor(
         _uiState.value = _uiState.value.copy(playbackSpeed = clamped)
     }
 
+    fun toggleFavoriteForSong(song: Song) {
+        val newFav = !song.isFavorite
+        val updatedSong = song.copy(isFavorite = newFav)
+
+        val isCurrent = _uiState.value.currentSong?.id == song.id
+        val updatedQueue = _uiState.value.queue.map {
+            if (it.id == song.id) it.copy(isFavorite = newFav) else it
+        }
+
+        if (isCurrent) {
+            _uiState.value = _uiState.value.copy(
+                currentSong = updatedSong,
+                isFavorite = newFav,
+                queue = updatedQueue
+            )
+        } else {
+            _uiState.value = _uiState.value.copy(queue = updatedQueue)
+        }
+
+        scope.launch(Dispatchers.IO) {
+            try {
+                val db = com.example.data.local.db.AuraDatabase.getInstance(context)
+                val existing = db.songDao().getSongById(song.id)
+                if (existing != null) {
+                    db.songDao().updateFavorite(song.id, newFav)
+                } else {
+                    db.songDao().insertSong(updatedSong)
+                }
+                AuraLog.i(TAG, "Toggled favorite for song '${song.title}' to $newFav in Room database")
+            } catch (e: Exception) {
+                AuraLog.e(TAG, "Failed to persist favorite status for '${song.title}': ${e.message}", e)
+            }
+        }
+    }
+
     fun toggleFavorite() {
         val currentSong = _uiState.value.currentSong ?: return
-        val newFav = !_uiState.value.isFavorite
-        _uiState.value = _uiState.value.copy(isFavorite = newFav)
+        toggleFavoriteForSong(currentSong)
     }
 
     private fun startPositionTicker() {

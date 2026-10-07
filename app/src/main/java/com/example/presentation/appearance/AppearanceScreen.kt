@@ -96,6 +96,7 @@ fun AppearanceScreen(
     val isPlaying = playerUiState.isPlaying
     val theme = AuraTheme.current
 
+    var selectedFontId by remember { mutableStateOf("inter") }
     var showColorPickerDialog by remember { mutableStateOf(false) }
     var activeColorSlot by remember { mutableStateOf("Primary") }
     var previewSeekProgress by remember { mutableFloatStateOf(0.42f) }
@@ -224,15 +225,21 @@ fun AppearanceScreen(
                         )
                         Spacer(modifier = Modifier.width(16.dp))
                         Column(modifier = Modifier.weight(1f)) {
+                            val displayTitle = playerUiState.currentSong?.title ?: "No Song Playing"
+                            val displaySubtitle = if (playerUiState.currentSong != null) {
+                                "${activeSong.artist} • ${activeSong.audioBadgeLabel} • ${activeSong.bitDepth}-bit / ${(activeSong.sampleRate / 1000.0).toInt()} kHz"
+                            } else {
+                                "Tap to play • Or pick track from Library"
+                            }
                             Text(
-                                text = activeSong.title,
+                                text = displayTitle,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = theme.textColorPrimary,
                                 maxLines = 1
                             )
                             Text(
-                                text = "${activeSong.artist} • ${activeSong.audioBadgeLabel} • ${activeSong.bitDepth}-bit / ${(activeSong.sampleRate / 1000.0).toInt()} kHz",
+                                text = displaySubtitle,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = theme.primaryColor,
                                 fontWeight = FontWeight.SemiBold,
@@ -468,8 +475,8 @@ fun AppearanceScreen(
                         items(FontManager.getAllAvailableFonts()) { fontDef ->
                             GlassChip(
                                 text = fontDef.displayName,
-                                isSelected = fontDef.id == "inter" || fontDef.id == "system_default",
-                                onClick = { }
+                                isSelected = fontDef.id == selectedFontId,
+                                onClick = { selectedFontId = fontDef.id }
                             )
                         }
                     }
