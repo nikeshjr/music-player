@@ -55,6 +55,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.core.di.AuraServiceLocator
+import com.example.core.metadata.SampleHiResTracks
 import com.example.core.motion.AnimatedEqualizerBars
 import com.example.core.motion.FavoriteHeartBurst
 import com.example.core.motion.SpinningVinylRecord
@@ -63,6 +64,7 @@ import com.example.core.theme.AuraTheme
 import com.example.core.theme.FontManager
 import com.example.core.theme.PalettePreset
 import com.example.core.theme.ThemeMode
+import com.example.presentation.components.AuraArtworkImage
 import com.example.presentation.components.GlassButton
 import com.example.presentation.components.GlassCard
 import com.example.presentation.components.GlassChip
@@ -71,6 +73,7 @@ import com.example.presentation.components.GlassSlider
 import com.example.presentation.components.GlassSurface
 import com.example.presentation.components.GlassSwitch
 import com.example.presentation.components.HsvColorPicker
+import com.example.service.AuraPlayerController
 import kotlinx.coroutines.launch
 
 /**
@@ -87,6 +90,10 @@ fun AppearanceScreen(
     val scope = rememberCoroutineScope()
     val preferences = remember { AuraServiceLocator.providePreferences(context) }
     val profileManager = remember { AuraServiceLocator.provideThemeProfileManager(context) }
+    val playerController = remember { AuraPlayerController.getInstance(context) }
+    val playerUiState by playerController.uiState.collectAsState()
+    val activeSong = playerUiState.currentSong ?: SampleHiResTracks.tracks.first()
+    val isPlaying = playerUiState.isPlaying
     val theme = AuraTheme.current
 
     var showColorPickerDialog by remember { mutableStateOf(false) }
@@ -192,50 +199,80 @@ fun AppearanceScreen(
             GlassSurface(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(18.dp)) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                if (playerUiState.currentSong == null) {
+                                    playerController.playSong(activeSong)
+                                } else {
+                                    playerController.togglePlayPause()
+                                }
+                            },
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Spinning Vinyl
+                        // Spinning Vinyl with Album Art
                         SpinningVinylRecord(
-                            isPlaying = true,
-                            modifier = Modifier.size(68.dp)
+                            isPlaying = isPlaying,
+                            modifier = Modifier.size(68.dp),
+                            albumArtContent = {
+                                AuraArtworkImage(
+                                    song = activeSong,
+                                    modifier = Modifier.fillMaxSize(),
+                                    shape = CircleShape
+                                )
+                            }
                         )
                         Spacer(modifier = Modifier.width(16.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Aura Sonic Odyssey",
+                                text = activeSong.title,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = theme.textColorPrimary
+                                color = theme.textColorPrimary,
+                                maxLines = 1
                             )
                             Text(
-                                text = "Hi-Res FLAC • 24-bit / 96 kHz",
+                                text = "${activeSong.artist} • ${activeSong.audioBadgeLabel} • ${activeSong.bitDepth}-bit / ${(activeSong.sampleRate / 1000.0).toInt()} kHz",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = theme.primaryColor,
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                AnimatedEqualizerBars(isPlaying = true)
+                                AnimatedEqualizerBars(isPlaying = isPlaying)
                                 Spacer(modifier = Modifier.width(8.dp))
+                                val posText = if (playerUiState.currentSong != null) playerUiState.formattedPosition else "00:00"
+                                val durText = if (playerUiState.currentSong != null) playerUiState.formattedDuration else activeSong.formattedDuration
                                 Text(
-                                    text = "01:42 / 04:05",
+                                    text = "$posText / $durText",
                                     fontSize = 11.sp,
                                     color = theme.textColorSecondary
                                 )
                             }
                         }
                         FavoriteHeartBurst(
-                            isFavorite = previewIsFavorite,
-                            onToggle = { previewIsFavorite = !previewIsFavorite }
+                            isFavorite = if (playerUiState.currentSong != null) playerUiState.isFavorite else previewIsFavorite,
+                            onToggle = {
+                                if (playerUiState.currentSong != null) {
+                                    playerController.toggleFavorite()
+                                } else {
+                                    previewIsFavorite = !previewIsFavorite
+                                }
+                            }
                         )
                     }
 
                     Spacer(modifier = Modifier.height(14.dp))
 
                     WaveformSeekBar(
-                        progress = previewSeekProgress,
-                        onSeek = { previewSeekProgress = it }
+                        progress = if (playerUiState.currentSong != null) playerUiState.progress else previewSeekProgress,
+                        onSeek = { progress ->
+                            previewSeekProgress = progress
+                            if (playerUiState.currentSong != null && playerUiState.durationMs > 0) {
+                                playerController.seekToProgress(progress)
+                            }
+                        }
                     )
                 }
             }
@@ -382,13 +419,15 @@ fun AppearanceScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text("Chromatic Aberration", fontSize = 12.sp, color = Color.White)
                             Text("Split light into spectral colors at glass edges", fontSize = 10.sp, color = theme.textColorSecondary)
                         }
                         GlassSwitch(
-                            checked = true,
-                            onCheckedChange = { }
+                            checked = theme.chromaticAberration,
+                            onCheckedChange = { isChecked ->
+                                scope.launch { preferences.setChromaticAberration(isChecked) }
+                            }
                         )
                     }
 
@@ -399,13 +438,15 @@ fun AppearanceScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text("Adaptive GPU Downscaling", fontSize = 12.sp, color = Color.White)
                             Text("0.33x resolution buffer reduces GPU usage by 90%", fontSize = 10.sp, color = theme.textColorSecondary)
                         }
                         GlassSwitch(
-                            checked = true,
-                            onCheckedChange = { }
+                            checked = theme.adaptiveDownscaling,
+                            onCheckedChange = { isChecked ->
+                                scope.launch { preferences.setAdaptiveDownscaling(isChecked) }
+                            }
                         )
                     }
                 }

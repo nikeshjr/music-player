@@ -125,7 +125,9 @@ data class AuraThemeState(
     val hapticFeedbackEnabled: Boolean = true,
     val islandCornerRadius: Dp = 28.dp,
     val islandOpacity: Float = 0.95f,
-    val islandVinylArt: Boolean = true
+    val islandVinylArt: Boolean = true,
+    val chromaticAberration: Boolean = true,
+    val adaptiveDownscaling: Boolean = true
 ) {
     val isLight: Boolean
         get() = themeMode == ThemeMode.LIGHT

@@ -39,6 +39,7 @@ data class GlassEffectConfig(
   /** 0..1, mapped to 0..[LENS_MAX_DP] dp of lens refraction amount. 0.5 = Apple's 24dp. */
   val lensAmount: Float = 0.5f,
   val chromaticAberration: Boolean = true,
+  val adaptiveDownscaling: Boolean = true,
   val depthEffect: Boolean = true,
   /** [Color.Unspecified] means adaptive: light glass on light theme, dark on dark. */
   val surfaceTintColor: Color = Color.Unspecified,
@@ -145,7 +146,7 @@ fun Modifier.liquidGlass(
   if (!isGlassSupported()) return this
   val backdrop = LocalAppBackdrop.current ?: return this
   val density = LocalDensity.current
-  val resolutionScale = glassResolutionScale(blurRadiusDp)
+  val resolutionScale = if (config.adaptiveDownscaling) glassResolutionScale(blurRadiusDp) else 1f
   // Pixel-sized effect parameters operate on the downscaled backdrop layer, so
   // they are pre-multiplied by the resolution scale to keep the same visual size.
   val blurPx = with(density) { blurRadiusDp.dp.toPx() } * resolutionScale

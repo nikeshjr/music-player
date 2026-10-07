@@ -67,16 +67,18 @@ fun Modifier.liquidGlassmorphic(
     lensAmount: Float = 0.5f,
     chromaticAberration: Boolean = true
 ): Modifier {
+    val theme = AuraTheme.current
     val config = LocalGlassEffectConfig.current.copy(
         globalEnabled = true,
         vibrancy = 1.3f,
         blurRadius = blurRadiusDp,
         lensHeight = 0.5f,
         lensAmount = lensAmount,
-        chromaticAberration = chromaticAberration,
+        chromaticAberration = theme.chromaticAberration && chromaticAberration,
         depthEffect = true,
         surfaceTintColor = tint,
-        surfaceOpacity = tintAlpha
+        surfaceOpacity = tintAlpha,
+        adaptiveDownscaling = theme.adaptiveDownscaling
     )
 
     return this

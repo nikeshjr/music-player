@@ -46,6 +46,8 @@ class AuraPreferences(private val context: Context) {
         val KEY_ISLAND_HIDE_FULLSCREEN = booleanPreferencesKey("island_hide_fullscreen")
         val KEY_MIN_DURATION_SECONDS = intPreferencesKey("min_duration_seconds")
         val KEY_ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
+        val KEY_CHROMATIC_ABERRATION = booleanPreferencesKey("chromatic_aberration")
+        val KEY_ADAPTIVE_DOWNSCALING = booleanPreferencesKey("adaptive_downscaling")
     }
 
     private val dataStore = context.dataStore
@@ -82,7 +84,9 @@ class AuraPreferences(private val context: Context) {
             bottomBarStyle = bbStyle,
             animationSpeedMultiplier = prefs[KEY_ANIMATION_SPEED] ?: 1.0f,
             reduceMotion = prefs[KEY_REDUCE_MOTION] ?: false,
-            hapticFeedbackEnabled = prefs[KEY_HAPTICS_ENABLED] ?: true
+            hapticFeedbackEnabled = prefs[KEY_HAPTICS_ENABLED] ?: true,
+            chromaticAberration = prefs[KEY_CHROMATIC_ABERRATION] ?: true,
+            adaptiveDownscaling = prefs[KEY_ADAPTIVE_DOWNSCALING] ?: true
         )
     }
 
@@ -152,4 +156,13 @@ class AuraPreferences(private val context: Context) {
     suspend fun setCrossfadeSeconds(seconds: Int) {
         dataStore.edit { it[KEY_CROSSFADE_SECONDS] = seconds }
     }
+
+    suspend fun setChromaticAberration(enabled: Boolean) {
+        dataStore.edit { it[KEY_CHROMATIC_ABERRATION] = enabled }
+    }
+
+    suspend fun setAdaptiveDownscaling(enabled: Boolean) {
+        dataStore.edit { it[KEY_ADAPTIVE_DOWNSCALING] = enabled }
+    }
 }
+
