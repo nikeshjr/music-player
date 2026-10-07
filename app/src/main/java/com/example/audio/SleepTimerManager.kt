@@ -1,32 +1,21 @@
 package com.example.audio
 
 import com.example.core.logger.AuraLog
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
 
-/**
- * SleepTimerManager: Audio sleep timer supporting minute countdowns, End of Track,
- * and End of Queue modes with volume fade-out prior to stopping playback.
- */
 class SleepTimerManager(
     private val onFadeVolume: (Float) -> Unit,
     private val onTimerExpired: () -> Unit
 ) {
-
     companion object {
         private const val TAG = "SleepTimerManager"
-        private const val FADE_OUT_DURATION_MS = 30_000L // 30 second gentle volume ramp-down
     }
 
     enum class SleepMode {
-        MINUTES, END_OF_TRACK, END_OF_QUEUE
+        MINUTES, END_OF_TRACK
     }
 
     data class SleepTimerState(
@@ -40,18 +29,14 @@ class SleepTimerManager(
     private val _timerState = MutableStateFlow(SleepTimerState())
     val timerState: StateFlow<SleepTimerState> = _timerState.asStateFlow()
 
+    private val scope = CoroutineScope(Dispatchers.Main)
     private var timerJob: Job? = null
-    private val scope = CoroutineScope(Dispatchers.Default)
 
-    /**
-     * Starts a minute-based countdown timer.
-     */
     fun startTimerMinutes(minutes: Int) {
         cancelTimer()
         if (minutes <= 0) return
-
         AuraLog.i(TAG, "Starting sleep timer for $minutes minutes.")
-        val totalSeconds = minutes * 60L
+        val totalSeconds = (minutes * 60).toLong()
         _timerState.value = SleepTimerState(
             isActive = true,
             mode = SleepMode.MINUTES,
@@ -59,29 +44,24 @@ class SleepTimerManager(
             remainingSeconds = totalSeconds,
             formattedRemaining = formatTime(totalSeconds)
         )
-
         timerJob = scope.launch {
             var currentSec = totalSeconds
             while (isActive && currentSec > 0) {
                 delay(1000L)
                 currentSec--
-
-                // Calculate volume ramp in final 30 seconds
-                if (currentSec <= (FADE_OUT_DURATION_MS / 1000L)) {
-                    val volumeScale = (currentSec.toFloat() / (FADE_OUT_DURATION_MS / 1000L).toFloat()).coerceIn(0f, 1f)
-                    onFadeVolume(volumeScale)
+                if (currentSec <= 30) {
+                    val vol = (currentSec.toFloat() / 30f).coerceIn(0f, 1f)
+                    onFadeVolume(vol)
                 }
-
                 _timerState.value = _timerState.value.copy(
                     remainingSeconds = currentSec,
                     formattedRemaining = formatTime(currentSec)
                 )
             }
-
             if (isActive) {
                 AuraLog.i(TAG, "Sleep timer expired. Stopping audio playback.")
-                onFadeVolume(1.0f) // Reset volume for next play
-                _timerState.value = SleepTimerState(isActive = false)
+                onFadeVolume(1f)
+                _timerState.value = SleepTimerState()
                 onTimerExpired()
             }
         }
@@ -97,9 +77,6 @@ class SleepTimerManager(
         )
     }
 
-    /**
-     * Called by playback service when a track finishes playing.
-     */
     fun onTrackCompleted() {
         if (_timerState.value.isActive && _timerState.value.mode == SleepMode.END_OF_TRACK) {
             AuraLog.i(TAG, "Track completed under End of Track sleep timer. Stopping.")
@@ -111,8 +88,8 @@ class SleepTimerManager(
     fun cancelTimer() {
         timerJob?.cancel()
         timerJob = null
-        onFadeVolume(1.0f)
-        _timerState.value = SleepTimerState(isActive = false)
+        onFadeVolume(1f)
+        _timerState.value = SleepTimerState()
         AuraLog.d(TAG, "Sleep timer cancelled.")
     }
 

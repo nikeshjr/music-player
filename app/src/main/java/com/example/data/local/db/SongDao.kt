@@ -8,10 +8,6 @@ import androidx.room.Update
 import com.example.data.model.Song
 import kotlinx.coroutines.flow.Flow
 
-/**
- * SongDao: Reactive Room DAO handling all audio track queries, full-text searches,
- * favorites, and playback statistics.
- */
 @Dao
 interface SongDao {
 
@@ -24,17 +20,20 @@ interface SongDao {
     @Query("SELECT * FROM songs ORDER BY dateAdded DESC LIMIT :limit")
     fun getRecentlyAddedSongs(limit: Int = 50): Flow<List<Song>>
 
-    @Query("SELECT * FROM songs WHERE playCount > 0 ORDER BY playCount DESC LIMIT :limit")
-    fun getMostPlayedSongs(limit: Int = 50): Flow<List<Song>>
-
     @Query("SELECT * FROM songs WHERE lastPlayedTime > 0 ORDER BY lastPlayedTime DESC LIMIT :limit")
     fun getRecentlyPlayedSongs(limit: Int = 50): Flow<List<Song>>
+
+    @Query("SELECT * FROM songs WHERE playCount > 0 ORDER BY playCount DESC LIMIT :limit")
+    fun getMostPlayedSongs(limit: Int = 50): Flow<List<Song>>
 
     @Query("SELECT * FROM songs WHERE id = :id LIMIT 1")
     suspend fun getSongById(id: Long): Song?
 
     @Query("SELECT * FROM songs WHERE mediaStoreId = :mediaStoreId LIMIT 1")
     suspend fun getSongByMediaStoreId(mediaStoreId: Long): Song?
+
+    @Query("SELECT COUNT(*) FROM songs")
+    suspend fun getSongCount(): Int
 
     @Query("SELECT * FROM songs WHERE album = :albumTitle ORDER BY trackNumber ASC, title ASC")
     fun getSongsByAlbum(albumTitle: String): Flow<List<Song>>
@@ -49,16 +48,16 @@ interface SongDao {
     fun searchSongs(query: String): Flow<List<Song>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertSongs(songs: List<Song>)
+    suspend fun insertSong(song: Song): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertSong(song: Song): Long
+    suspend fun insertSongs(songs: List<Song>)
 
     @Update
     suspend fun updateSong(song: Song)
 
-    @Query("UPDATE songs SET isFavorite = :isFavorite WHERE id = :id")
-    suspend fun updateFavorite(id: Long, isFavorite: Boolean)
+    @Query("UPDATE songs SET isFavorite = :isFavorite WHERE id = :songId")
+    suspend fun updateFavorite(songId: Long, isFavorite: Boolean)
 
     @Query("UPDATE songs SET playCount = playCount + 1, lastPlayedTime = :timestamp WHERE id = :id")
     suspend fun recordPlay(id: Long, timestamp: Long = System.currentTimeMillis())
@@ -71,7 +70,4 @@ interface SongDao {
 
     @Query("DELETE FROM songs WHERE path NOT IN (:existingPaths)")
     suspend fun removeDeletedPaths(existingPaths: List<String>)
-
-    @Query("SELECT COUNT(*) FROM songs")
-    suspend fun getSongCount(): Int
 }

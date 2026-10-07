@@ -5,36 +5,34 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Deep Cosmic Gradient Background -->
     <path
         android:pathData="M0,0h108v108h-108z">
         <aapt:attr name="android:fillColor">
             <gradient
+                android:type="linear"
                 android:startX="0"
                 android:startY="0"
                 android:endX="108"
-                android:endY="108"
-                android:type="linear">
-                <item android:offset="0.0" android:color="#FF1A0933" />
-                <item android:offset="0.5" android:color="#FF0D1127" />
-                <item android:offset="1.0" android:color="#FF080A1A" />
+                android:endY="108">
+                <item android:color="#ff1a0933" android:offset="0.0" />
+                <item android:color="#ff0d1127" android:offset="0.5" />
+                <item android:color="#ff080a1a" android:offset="1.0" />
             </gradient>
         </aapt:attr>
     </path>
-    <!-- Ambient Aura Concentric Rings -->
     <path
+        android:fillColor="#00000000"
         android:pathData="M54,54m-42,0a42,42 0,1 1,84 0a42,42 0,1 1,-84 0"
-        android:strokeWidth="1.2"
-        android:strokeColor="#208C65FF"
-        android:fillColor="#00000000" />
+        android:strokeColor="#208c65ff"
+        android:strokeWidth="1.2"/>
     <path
+        android:fillColor="#00000000"
         android:pathData="M54,54m-32,0a32,32 0,1 1,64 0a32,32 0,1 1,-64 0"
-        android:strokeWidth="1.2"
-        android:strokeColor="#2500E5FF"
-        android:fillColor="#00000000" />
+        android:strokeColor="#2500e5ff"
+        android:strokeWidth="1.2"/>
     <path
+        android:fillColor="#00000000"
         android:pathData="M54,54m-22,0a22,22 0,1 1,44 0a22,22 0,1 1,-44 0"
-        android:strokeWidth="1.0"
-        android:strokeColor="#30B388FF"
-        android:fillColor="#00000000" />
+        android:strokeColor="#30b388ff"
+        android:strokeWidth="1"/>
 </vector>

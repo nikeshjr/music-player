@@ -9,9 +9,6 @@ import com.example.data.model.EqPreset
 import com.example.data.model.ThemeProfile
 import kotlinx.coroutines.flow.Flow
 
-/**
- * EqPresetDao: Manages audio equalizer presets and device-specific audio profiles.
- */
 @Dao
 interface EqPresetDao {
 
@@ -34,9 +31,6 @@ interface EqPresetDao {
     suspend fun deletePreset(id: Long)
 }
 
-/**
- * ThemeProfileDao: Manages saved user theme profiles for quick-switching and export.
- */
 @Dao
 interface ThemeProfileDao {
 

@@ -1,13 +1,13 @@
 package com.example.service
 
 import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
-import androidx.annotation.OptIn
+import android.os.Bundle
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
-import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.LibraryResult
 import androidx.media3.session.MediaLibraryService
@@ -20,28 +20,32 @@ import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 
-/**
- * PlaybackService: Foreground MediaLibraryService powering Android Auto, lockscreen media controls,
- * and gapless playback. Connects directly to AuraPlayerController.
- */
 class PlaybackService : MediaLibraryService() {
-
-    private var player: ExoPlayer? = null
-    private var mediaLibrarySession: MediaLibrarySession? = null
-
     companion object {
         private const val TAG = "PlaybackService"
         private const val ROOT_ID = "aura_root_id"
     }
 
-    @OptIn(UnstableApi::class)
+    private var player: ExoPlayer? = null
+    private var mediaLibrarySession: MediaLibrarySession? = null
+
     override fun onCreate() {
         super.onCreate()
         AuraLog.i(TAG, "Creating PlaybackService...")
 
-        // Reuse the single canonical ExoPlayer from AuraPlayerController
-        val exoPlayer = AuraPlayerController.getInstance(this).getOrCreatePlayer()
-        player = exoPlayer
+        val audioAttributes = AudioAttributes.Builder()
+            .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
+            .setUsage(C.USAGE_MEDIA)
+            .build()
+
+        val exo = ExoPlayer.Builder(this)
+            .setAudioAttributes(audioAttributes, true)
+            .setHandleAudioBecomingNoisy(true)
+            .setWakeMode(C.WAKE_MODE_LOCAL)
+            .build()
+        this.player = exo
+
+        AuraPlayerController.getInstance(this).attachPlayer(exo)
 
         val sessionActivityIntent = PendingIntent.getActivity(
             this,
@@ -50,7 +54,7 @@ class PlaybackService : MediaLibraryService() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        val callback = object : MediaLibrarySession.Callback {
+        mediaLibrarySession = MediaLibrarySession.Builder(this, exo, object : MediaLibrarySession.Callback {
             override fun onGetLibraryRoot(
                 session: MediaLibrarySession,
                 browser: MediaSession.ControllerInfo,
@@ -78,14 +82,13 @@ class PlaybackService : MediaLibraryService() {
                 params: LibraryParams?
             ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
                 val children = mutableListOf<MediaItem>()
-
                 if (parentId == ROOT_ID) {
                     val categories = listOf(
-                        Pair("recent_id", "Recently Added"),
-                        Pair("albums_id", "Albums"),
-                        Pair("artists_id", "Artists"),
-                        Pair("playlists_id", "Playlists"),
-                        Pair("favorites_id", "Favorites")
+                        "recent_id" to "Recently Added",
+                        "albums_id" to "Albums",
+                        "artists_id" to "Artists",
+                        "playlists_id" to "Playlists",
+                        "favorites_id" to "Favorites"
                     )
                     for ((id, title) in categories) {
                         children.add(
@@ -109,18 +112,14 @@ class PlaybackService : MediaLibraryService() {
                 session: MediaSession,
                 controller: MediaSession.ControllerInfo,
                 customCommand: SessionCommand,
-                args: android.os.Bundle
+                args: Bundle
             ): ListenableFuture<SessionResult> {
-                when (customCommand.customAction) {
-                    "TOGGLE_FAVORITE" -> AuraPlayerController.getInstance(this@PlaybackService).toggleFavorite()
+                if (customCommand.customAction == "TOGGLE_FAVORITE") {
+                    AuraPlayerController.getInstance(this@PlaybackService).toggleFavorite()
                 }
                 return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
             }
-        }
-
-        mediaLibrarySession = MediaLibrarySession.Builder(this, exoPlayer, callback)
-            .setSessionActivity(sessionActivityIntent)
-            .build()
+        }).setSessionActivity(sessionActivityIntent).build()
 
         AuraLog.i(TAG, "PlaybackService initialized with MediaLibrarySession.")
     }
@@ -131,8 +130,9 @@ class PlaybackService : MediaLibraryService() {
 
     override fun onDestroy() {
         AuraLog.i(TAG, "Destroying PlaybackService...")
-        mediaLibrarySession?.run {
-            release()
+        mediaLibrarySession?.let {
+            it.player.release()
+            it.release()
             mediaLibrarySession = null
         }
         player = null
