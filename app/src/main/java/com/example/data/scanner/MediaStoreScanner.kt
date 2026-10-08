@@ -9,6 +9,8 @@ import android.os.Build
 import android.provider.MediaStore
 import com.example.core.logger.AuraLog
 import com.example.data.local.db.SongDao
+import com.example.data.local.db.pruneMissingMediaStoreSongs
+import com.example.data.local.db.upsertPreservingStats
 import com.example.data.metadata.ArtistSplitter
 import com.example.data.metadata.FlacVorbisCommentParser
 import com.example.data.model.Song
@@ -251,8 +253,8 @@ class MediaStoreScanner(
             }
 
             if (songsList.isNotEmpty()) {
-                songDao.insertSongs(songsList)
-                songDao.removeDeletedPaths(existingPaths)
+                songDao.upsertPreservingStats(songsList)
+                songDao.pruneMissingMediaStoreSongs(existingPaths.toSet())
             }
 
             AuraLog.i(TAG, "Audio scan completed. Indexed ${songsList.size} tracks with full FLAC/Hi-Res inspection.")

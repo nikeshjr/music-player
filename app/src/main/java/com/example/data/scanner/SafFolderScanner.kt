@@ -21,6 +21,19 @@ class SafFolderScanner(private val context: Context) {
 
     companion object {
         private const val TAG = "SafFolderScanner"
+
+        /**
+         * Stable, unique key for a SAF document. Always negative so it can never collide with
+         * MediaStore ids (positive) and is never 0 (the "unset" value).
+         */
+        internal fun safStableId(uri: Uri): Long {
+            var hash = -0x340d631b7bdddcdbL // FNV-1a 64-bit offset basis
+            for (ch in uri.toString()) {
+                hash = (hash xor ch.code.toLong()) * 0x100000001b3L
+            }
+            val positive = hash and Long.MAX_VALUE
+            return if (positive == 0L) -1L else -positive
+        }
     }
 
     data class SafSidecarResources(
@@ -143,7 +156,7 @@ class SafFolderScanner(private val context: Context) {
 
                     val currentTime = System.currentTimeMillis() / 1000L
                     val song = com.example.data.model.Song(
-                        mediaStoreId = 0L,
+                        mediaStoreId = safStableId(file.uri),
                         title = title,
                         artist = artist,
                         album = album,

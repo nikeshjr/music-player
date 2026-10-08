@@ -8,6 +8,9 @@ import androidx.room.Update
 import com.example.data.model.Song
 import kotlinx.coroutines.flow.Flow
 
+/** Lightweight projection used to diff the database against a fresh MediaStore scan. */
+data class SongPathRow(val id: Long, val path: String)
+
 @Dao
 interface SongDao {
 
@@ -31,6 +34,9 @@ interface SongDao {
 
     @Query("SELECT * FROM songs WHERE mediaStoreId = :mediaStoreId LIMIT 1")
     suspend fun getSongByMediaStoreId(mediaStoreId: Long): Song?
+
+    @Query("SELECT * FROM songs WHERE mediaStoreId IN (:mediaStoreIds)")
+    suspend fun getSongsByMediaStoreIds(mediaStoreIds: List<Long>): List<Song>
 
     @Query("SELECT COUNT(*) FROM songs")
     suspend fun getSongCount(): Int
@@ -68,6 +74,13 @@ interface SongDao {
     @Query("DELETE FROM songs WHERE id = :id")
     suspend fun deleteSong(id: Long)
 
-    @Query("DELETE FROM songs WHERE path NOT IN (:existingPaths)")
-    suspend fun removeDeletedPaths(existingPaths: List<String>)
+    // MediaStore rows only (positive ids); SAF songs use negative ids and are never pruned.
+    @Query("SELECT id, path FROM songs WHERE mediaStoreId > 0")
+    suspend fun getMediaStoreRows(): List<SongPathRow>
+
+    @Query("DELETE FROM songs WHERE id IN (:ids)")
+    suspend fun deleteSongsByIds(ids: List<Long>)
+
+    @Query("DELETE FROM songs WHERE path IN (:paths) AND mediaStoreId IN (:mediaStoreIds)")
+    suspend fun deleteByPathAndMediaStoreId(paths: List<String>, mediaStoreIds: List<Long>)
 }

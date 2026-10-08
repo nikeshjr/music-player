@@ -23,17 +23,19 @@ class AuraApplication : Application() {
         AuraLog.initialize(this)
         AuraLog.i(TAG, "Aura Music application initializing...")
 
-        // Pre-initialize Room Database singleton and seed initial tracks
+        // Pre-initialize Room Database singleton. Sample tracks are no longer seeded into Room
+        // (they have fake paths and ids); remove any rows an earlier build already seeded.
         try {
             val db = AuraDatabase.getInstance(this)
             kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
                 try {
-                    if (db.songDao().getSongCount() == 0) {
-                        db.songDao().insertSongs(com.example.core.metadata.SampleHiResTracks.tracks)
-                        AuraLog.i(TAG, "Seeded initial tracks into Room database")
-                    }
+                    val samples = com.example.core.metadata.SampleHiResTracks.tracks
+                    db.songDao().deleteByPathAndMediaStoreId(
+                        samples.map { it.path },
+                        samples.map { it.mediaStoreId }
+                    )
                 } catch (e: Throwable) {
-                    AuraLog.e(TAG, "Error checking/seeding tracks: ${e.message}", e)
+                    AuraLog.e(TAG, "Error removing seeded sample tracks: ${e.message}", e)
                 }
             }
         } catch (e: Throwable) {
