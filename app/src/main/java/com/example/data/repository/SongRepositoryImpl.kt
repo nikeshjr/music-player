@@ -1,6 +1,7 @@
 package com.example.data.repository
 
 import com.example.data.local.db.SongDao
+import com.example.data.local.db.upsertPreservingStats
 import com.example.data.model.Album
 import com.example.data.model.Artist
 import com.example.data.model.Song
@@ -98,6 +99,9 @@ class SongRepositoryImpl(
     override suspend fun insertSongs(songs: List<Song>) {
         songDao.insertSongs(songs)
     }
+
+    override suspend fun upsertSongs(songs: List<Song>): List<Song> =
+        songDao.upsertPreservingStats(songs)
 
     override suspend fun scanMediaStore(minDurationSeconds: Int): Int {
         return mediaStoreScanner.scanAudioFiles(minDurationSeconds)

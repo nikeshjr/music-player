@@ -155,8 +155,8 @@ fun LibraryScreen(
 
                     val safSongs = safScanner.scanAudioFilesInTree(uri)
                     if (safSongs.isNotEmpty()) {
-                        folderSongs = safSongs
-                        repository.insertSongs(safSongs)
+                        // Use the stored rows so every song has a unique, real database id.
+                        folderSongs = repository.upsertSongs(safSongs)
                         isOnlyFolderMode = true // Automatically switch to folder-only mode
                         scanMessage = "Loaded ${safSongs.size} tracks from $lastSegment"
                     } else {

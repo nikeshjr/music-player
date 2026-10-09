@@ -23,5 +23,11 @@ interface SongRepository {
     suspend fun recordSkip(songId: Long)
     suspend fun deleteSong(songId: Long)
     suspend fun insertSongs(songs: List<Song>)
+
+    /**
+     * Inserts songs keeping the ids and user stats (favorites, play counts) of rows that
+     * already exist, and returns the stored rows with their real database ids.
+     */
+    suspend fun upsertSongs(songs: List<Song>): List<Song>
     suspend fun scanMediaStore(minDurationSeconds: Int = 10): Int
 }
